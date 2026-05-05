@@ -212,9 +212,9 @@ public class FileConversionService {
             if (ord.getStatut() != Statut.NON_CONFIRME && ord.getStatut() != Statut.NON_PLANIFIE) {
                 if (ord.getVoycle() != null) {
                     this.updateOrdrevent(ord.getVoycle());
-                } else {
-                    System.err.println("DEBUG: Skipping order " + ord.getOrderNumber()
-                            + " because voycle is null despite status " + ord.getStatut());
+                } else if (ord.getStatut() != null) {
+                    System.err.println("DEBUG: Skipping event sync for order " + ord.getOrderNumber()
+                            + " because voycle is null (statut: " + ord.getStatut() + ")");
                 }
             }
         }
