@@ -11,6 +11,7 @@ import { DashboardService } from '../dashboard.service';
 import { AuthService } from '../auth.service';
 import { OrdreService } from '../ordre.service';
 import { forkJoin } from 'rxjs';
+import { PlanningCalendarComponent } from '../planning-calendar/planning-calendar.component';
 
 export type DonutChartOptions = {
   series: ApexNonAxisChartSeries;
@@ -35,7 +36,7 @@ export type BarChartOptions = {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterModule, NgApexchartsModule],
+  imports: [CommonModule, DatePipe, RouterModule, NgApexchartsModule, PlanningCalendarComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -262,6 +263,11 @@ export class DashboardComponent implements OnInit {
   getUsersProgress(): string { return `${Math.min(this.usersCount * 10, 100)}%`; }
   getDeliveryProgress(): string {
     return this.ordersCount > 0 ? `${Math.round((this.enCoursDeLivraisonCount / this.ordersCount) * 100)}%` : '5%';
+  }
+
+  /** Returns the client code (username) used to filter the planning calendar for CLIENT role */
+  get clientCode(): string {
+    return this.currentUser?.username ?? this.currentUser?.email ?? '';
   }
 }
 

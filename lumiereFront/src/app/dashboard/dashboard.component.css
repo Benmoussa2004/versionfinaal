@@ -1,4 +1,4 @@
-﻿/* ── Base ── */
+/* ── Base ── */
 .view-container {
   padding: 30px;
   animation: fadeIn 0.6s ease-out;
@@ -633,4 +633,10 @@
   white-space: nowrap;
 }
 
+
+/* ── Planning Calendar section ── */
+.calendar-section {
+  margin-top: 28px;
+  animation: fadeIn 0.7s ease-out;
+}
 

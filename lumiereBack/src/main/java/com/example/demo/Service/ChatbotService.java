@@ -683,7 +683,7 @@ public class ChatbotService {
                 String artQuery = (String) args.get("query");
                 List<Article> articles;
                 if (artQuery == null || artQuery.trim().isEmpty() || artQuery.toLowerCase().contains("tous") || artQuery.toLowerCase().contains("liste")) {
-                    articles = articleRepository.findAll().stream().limit(15).toList();
+                    articles = articleRepository.findAll().stream().limit(100).toList();
                 } else {
                     articles = articleRepository.findAll().stream()
                         .filter(a -> (a.getLabel() != null && a.getLabel().toLowerCase().contains(artQuery.toLowerCase())) ||

@@ -1,0 +1,127 @@
+<div class="cal-wrapper">
+
+  <!-- ── Header ── -->
+  <div class="cal-header">
+    <div class="cal-title-block">
+      <div class="cal-icon"><i class="fas fa-calendar-alt"></i></div>
+      <div>
+        <h4 class="cal-title">Planification des Ordres</h4>
+        <span class="cal-subtitle">
+          <ng-container *ngIf="isAdmin">Vue globale — tous les ordres</ng-container>
+          <ng-container *ngIf="!isAdmin">Mes ordres planifiés</ng-container>
+        </span>
+      </div>
+    </div>
+
+    <!-- Filters (admin / commercial only) -->
+    <div class="cal-filters" *ngIf="isAdmin">
+      <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-map-marker-alt"></i> Site</label>
+        <select class="cal-select" [(ngModel)]="siteFilter" (change)="applyFilters()">
+          <option value="">Tous les sites</option>
+          <option *ngFor="let s of sites" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-tag"></i> Statut</label>
+        <select class="cal-select" [(ngModel)]="statutFilter" (change)="applyFilters()">
+          <option value="">Tous les statuts</option>
+          <option *ngFor="let s of statuts" [value]="s.value">{{ s.label }}</option>
+        </select>
+      </div>
+
+      <button class="btn-clear" *ngIf="siteFilter || statutFilter" (click)="clearFilters()">
+        <i class="fas fa-times"></i> Effacer
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Legend strips ── -->
+  <div class="cal-legend">
+    <span *ngFor="let s of statuts" class="legend-chip" [style.border-color]="getStatusColor(s.value)">
+      <span class="legend-dot" [style.background]="getStatusColor(s.value)"></span>
+      {{ s.label }}
+    </span>
+  </div>
+
+  <!-- ── Navigation bar ── -->
+  <div class="cal-nav">
+    <button class="nav-btn" (click)="prevMonth()"><i class="fas fa-chevron-left"></i></button>
+    <div class="nav-center">
+      <span class="nav-month">{{ monthLabel }}</span>
+      <span class="nav-total">{{ totalThisMonth }} ordre(s)</span>
+    </div>
+    <button class="nav-btn today-btn" (click)="goToday()">Aujourd'hui</button>
+    <button class="nav-btn" (click)="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+
+  <!-- ── Day-of-week headers ── -->
+  <div class="cal-grid-header">
+    <div class="dow-cell" *ngFor="let d of weekDays">{{ d }}</div>
+  </div>
+
+  <!-- ── Calendar grid ── -->
+  <div class="cal-grid">
+    <div
+      *ngFor="let day of calendarDays"
+      class="cal-day"
+      [class.other-month]="!day.isCurrentMonth"
+      [class.today]="day.isToday"
+      [class.has-orders]="day.orders.length > 0"
+      [class.selected]="selectedDay?.date?.getTime() === day.date.getTime()"
+      (click)="day.orders.length > 0 && selectDay(day)"
+    >
+      <span class="day-num">{{ day.date | date:'d' }}</span>
+
+      <!-- Order pills (max 3 visible) -->
+      <div class="day-pills" *ngIf="day.orders.length > 0">
+        <div
+          *ngFor="let o of day.orders.slice(0,3)"
+          class="order-pill"
+          [style.background]="getStatusColor(o.statut) + '22'"
+          [style.border-left-color]="getStatusColor(o.statut)"
+          [title]="o.orderNumber + ' — ' + getStatusLabel(o.statut)"
+        >
+          <span class="pill-dot" [style.background]="getStatusColor(o.statut)"></span>
+          <span class="pill-text">{{ o.orderNumber || ('Ordre #'+o.id) }}</span>
+        </div>
+        <div class="more-badge" *ngIf="day.orders.length > 3">
+          +{{ day.orders.length - 3 }} autres
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Detail panel ── -->
+  <div class="day-detail" *ngIf="selectedDay">
+    <div class="detail-header">
+      <div class="detail-date">
+        <i class="fas fa-calendar-day"></i>
+        {{ selectedDay.date | date:'EEEE d MMMM yyyy':'':'fr' }}
+      </div>
+      <button class="detail-close" (click)="selectedDay = null"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="detail-list">
+      <div *ngFor="let o of selectedDay.orders" class="detail-card"
+           [style.border-left-color]="getStatusColor(o.statut)">
+        <div class="detail-top">
+          <span class="detail-num">{{ o.orderNumber || ('Ordre #'+o.id) }}</span>
+          <span class="detail-badge"
+                [style.background]="getStatusColor(o.statut)+'22'"
+                [style.color]="getStatusColor(o.statut)">
+            {{ getStatusLabel(o.statut) }}
+          </span>
+        </div>
+        <div class="detail-info">
+          <span *ngIf="o.nomclient"><i class="fas fa-user"></i> {{ o.nomclient }}</span>
+          <span *ngIf="o.siteclient"><i class="fas fa-map-marker-alt"></i> {{ o.siteclient }}</span>
+          <span *ngIf="o.chauffeur"><i class="fas fa-id-badge"></i> {{ o.chauffeur }}</span>
+          <span *ngIf="o.chargementVille"><i class="fas fa-arrow-right"></i> {{ o.chargementVille }} → {{ o.livraisonVille }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
