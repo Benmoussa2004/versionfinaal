@@ -118,7 +118,7 @@
       </thead>
       <tbody>
         <ng-container *ngFor="let ordre of ordresFiltres">
-          <tr *ngIf="ordre.statut !== 'NON_CONFIRME'" class="order-card-row" [ngClass]="ordre.statut.toLowerCase()">
+          <tr *ngIf="ordre.statut && ordre.statut !== 'NON_CONFIRME'" class="order-card-row" [ngClass]="ordre.statut ? ordre.statut.toLowerCase() : ''">
             <!-- Column 1: Dates & Identité -->
             <td class="cell-identity">
               <div class="client-name-bold">{{ ordre.orderNumber }}</div>
@@ -222,7 +222,7 @@
                       <span class="label">Fin</span>
                     </div>
                   </div>
-                  <div class="current-status-text" [ngClass]="ordre.statut.toLowerCase()">
+                  <div class="current-status-text" [ngClass]="ordre.statut ? ordre.statut.toLowerCase() : ''">
                     {{ ordre.statut }}
                   </div>
                </div>
@@ -290,8 +290,8 @@
 </div>
 
 <!-- Premium Map Modal -->
-<div class="modal-overlay" [ngClass]="{'show': isMapModalOpen}" (click)="closeMapModal()">
-  <div class="premium-modal map-modal-size" (click)="$event.stopPropagation()">
+<div class="modal-overlay" [ngClass]="{'show': isMapModalOpen}">
+  <div class="premium-modal map-modal-size">
     <div class="modal-header-gradient">
       <div class="header-content">
         <i class="fa fa-map-marked-alt"></i>
@@ -323,7 +323,7 @@
 
     <div class="modal-footer-premium">
         <div class="map-stats" *ngIf="selectedOrdreForMap">
-            <span><i class="fa fa-road"></i> Distance: -- km</span>
+            <span><i class="fa fa-road"></i> Distance: {{ totalDistance }} km</span>
             <span><i class="fa fa-clock"></i> ETA: -- : --</span>
         </div>
         <button type="button" class="btn-save" (click)="closeMapModal()">Fermer</button>

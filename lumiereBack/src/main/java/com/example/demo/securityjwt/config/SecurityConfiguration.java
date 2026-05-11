@@ -79,7 +79,8 @@ public class SecurityConfiguration {
                                 AntPathRequestMatcher.antMatcher("/error"),
                                 AntPathRequestMatcher.antMatcher("/api/v1/auth/register"),
                                 AntPathRequestMatcher.antMatcher("/api/v1/auth/authenticate"),
-                                AntPathRequestMatcher.antMatcher("/api/v1/admin/status"))
+                                AntPathRequestMatcher.antMatcher("/api/v1/admin/status"),
+                                AntPathRequestMatcher.antMatcher("/api/v1/ordres/**/parcours"))
                         .permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/auth/profile")).authenticated()
                         .anyRequest().authenticated())

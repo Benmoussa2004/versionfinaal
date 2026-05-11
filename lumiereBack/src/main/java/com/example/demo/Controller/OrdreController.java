@@ -398,4 +398,16 @@ public class OrdreController {
 		gpsSyncService.forceSync();
 		return ResponseEntity.ok("Synchronisation GPS lancée.");
 	}
+
+	@GetMapping("/{id}/parcours")
+	public ResponseEntity<List<Map<String, Object>>> getOrderTrail(@PathVariable Long id) {
+		return ordreService.findById(id).map(o -> {
+			List<Map<String, Object>> trail = gpsSyncService.getOrderTrail(
+				o.getCamion(), 
+				o.getChargementDate(), 
+				o.getLivraisonDate()
+			);
+			return ResponseEntity.ok(trail);
+		}).orElse(ResponseEntity.notFound().build());
+	}
 }
