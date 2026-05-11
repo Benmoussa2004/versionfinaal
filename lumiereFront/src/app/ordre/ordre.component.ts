@@ -26,8 +26,11 @@ export class OrdreComponent implements OnInit {
   selectedOrdreForMap: any = null;
   map: any = null;
   truckMarker: any = null;
+  trailPolyline: any = null;
   // reference points to avoid disappearing during refresh
   refCoords = { lat1: 0, lon1: 0, lat2: 0, lon2: 0 }; 
+  simulationLine: any = null;
+  totalDistance: string = '--';
   private refreshInterval: any;
 
 
@@ -170,9 +173,13 @@ export class OrdreComponent implements OnInit {
   }
 
   voirMap(ordre: any) {
+    // 1. Arrêter TOUT rafraîchissement en arrière-plan
+    if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+        this.refreshInterval = null;
+    }
     this.selectedOrdreForMap = ordre;
     this.isMapModalOpen = true;
-    console.log('Ouverture de la carte pour l\'ordre:', ordre.orderNumber);
     this.initMap();
   }
 
@@ -180,11 +187,16 @@ export class OrdreComponent implements OnInit {
     this.isMapModalOpen = false;
     this.selectedOrdreForMap = null;
     this.truckMarker = null;
+    this.trailPolyline = null;
+    this.simulationLine = null;
+    this.totalDistance = '--';
     if (this.refreshInterval) {
         clearInterval(this.refreshInterval);
-        // Restart the general refresh
-        this.refreshInterval = setInterval(() => this.filtrerParDate(), 30000);
+        this.refreshInterval = null;
     }
+    
+    // Restart the general refresh
+    this.refreshInterval = setInterval(() => this.filtrerParDate(), 30000);
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -210,15 +222,22 @@ export class OrdreComponent implements OnInit {
          // Show truck immediately if GPS is available
          if (this.selectedOrdreForMap.currentLat && this.selectedOrdreForMap.currentLon) {
              this.plotTruck(0, 0, 0, 0); 
-             this.map.setView([this.selectedOrdreForMap.currentLat, this.selectedOrdreForMap.currentLon], 13);
+             this.map.setView([this.selectedOrdreForMap.currentLat, this.selectedOrdreForMap.currentLon], 11);
+         }
+
+         // If order is delivered, show the full trail
+         if (this.selectedOrdreForMap.statut === 'LIVRE') {
+             this.fetchTrail(this.selectedOrdreForMap.id);
          }
          
          this.geocodeAndPlot(this.selectedOrdreForMap.chargementVille, this.selectedOrdreForMap.livraisonVille);
 
-         // LIVE TRACKING: Secure refresh
+         // LIVE TRACKING: Secure refresh ONLY if NOT delivered
          const currentOrderNumber = this.selectedOrdreForMap.orderNumber;
          if (this.refreshInterval) clearInterval(this.refreshInterval);
-         this.refreshInterval = setInterval(() => {
+         
+         if (this.selectedOrdreForMap.statut !== 'LIVRE') {
+             this.refreshInterval = setInterval(() => {
              this.service.search({orderNumber: currentOrderNumber}).subscribe(res => {
                  // Only update if it's EXACTLY the same order
                  const updatedOrder = res.find((o: any) => o.orderNumber === currentOrderNumber);
@@ -228,7 +247,8 @@ export class OrdreComponent implements OnInit {
                      this.plotTruck(this.refCoords.lat1, this.refCoords.lon1, this.refCoords.lat2, this.refCoords.lon2);
                  }
              });
-         }, 10000);
+             }, 10000);
+         }
       }
     }, 300);
   }
@@ -273,10 +293,10 @@ export class OrdreComponent implements OnInit {
 
             // Draw connecting dashed line
             const latlngs: L.LatLngTuple[] = [ [lat1, lon1], [lat2, lon2] ];
-            const polyline = L.polyline(latlngs, {color: '#3b82f6', weight: 4, dashArray: '5, 10'}).addTo(this.map);
+            this.simulationLine = L.polyline(latlngs, {color: '#94a3b8', weight: 2, dashArray: '5, 10', opacity: 0.5}).addTo(this.map);
             
             // Adjust bounds to fit both points
-            this.map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+            this.map.fitBounds(this.simulationLine.getBounds(), { padding: [50, 50] });
 
             // Store ref coords for refresh
             this.refCoords = { lat1, lon1, lat2, lon2 };
@@ -351,6 +371,57 @@ export class OrdreComponent implements OnInit {
               </div>
           `).addTo(this.map);
       }
+  }
+
+  fetchTrail(ordreId: number) {
+      this.http.get<any[]>(`http://localhost:8090/api/v1/ordres/${ordreId}/parcours`).subscribe(points => {
+          if (points && points.length > 1) {
+              const latlngs: L.LatLngExpression[] = points.map(p => [p.lat, p.lng]);
+              
+              if (this.trailPolyline) this.map.removeLayer(this.trailPolyline);
+              if (this.simulationLine) this.map.removeLayer(this.simulationLine);
+              
+              // 1. Calcul de la distance totale
+              let dist = 0;
+              for (let i = 0; i < latlngs.length - 1; i++) {
+                  const p1 = L.latLng(latlngs[i] as L.LatLngTuple);
+                  const p2 = L.latLng(latlngs[i+1] as L.LatLngTuple);
+                  dist += p1.distanceTo(p2);
+              }
+              this.totalDistance = (dist / 1000).toFixed(2);
+
+              // 2. Tracé professionnel
+              this.trailPolyline = L.polyline(latlngs, {
+                  color: '#2563eb', // Bleu royal
+                  weight: 5,
+                  opacity: 0.8,
+                  smoothFactor: 1
+              }).addTo(this.map);
+
+              this.map.fitBounds(this.trailPolyline.getBounds(), { padding: [50, 50] });
+              
+              // 3. Icônes personnalisées
+              const warehouseIcon = L.divIcon({
+                  html: '<div class="map-marker-pro start"><i class="fa fa-warehouse"></i></div>',
+                  className: 'custom-div-icon', iconSize: [30, 30], iconAnchor: [15, 15]
+              });
+
+              const flagIcon = L.divIcon({
+                  html: '<div class="map-marker-pro end"><i class="fa fa-flag-checkered"></i></div>',
+                  className: 'custom-div-icon', iconSize: [30, 30], iconAnchor: [15, 15]
+              });
+
+              L.marker(latlngs[0], {icon: warehouseIcon}).bindPopup('<b>Départ Réel</b><br>Heure: ' + new Date(points[0].date).toLocaleString()).addTo(this.map);
+              L.marker(latlngs[latlngs.length - 1], {icon: flagIcon}).bindPopup('<b>Arrivée Réelle</b><br>Heure: ' + new Date(points[points.length-1].date).toLocaleString()).addTo(this.map);
+
+              // 4. Points de passage (vitesse) - tous les 10 points pour ne pas surcharger
+              for (let i = 5; i < points.length - 5; i += 15) {
+                  L.circleMarker([points[i].lat, points[i].lng], {radius: 3, color: '#ffffff', fillColor: '#2563eb', fillOpacity: 1, weight: 1})
+                  .bindTooltip(`Vitesse: ${points[i].speed} km/h<br>Heure: ${new Date(points[i].date).toLocaleTimeString()}`)
+                  .addTo(this.map);
+              }
+          }
+      });
   }
 
   detail(ordre: any) {
