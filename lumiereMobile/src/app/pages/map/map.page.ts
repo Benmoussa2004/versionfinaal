@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonHeader, IonIcon, IonSpinner, ToastController } from '@ionic/angular/standalone';
 import { NavController, ViewDidEnter } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { arrowBackOutline, notificationsOutline, logOutOutline, busOutline, analyticsOutline, locationOutline, businessOutline } from 'ionicons/icons';
@@ -19,16 +19,25 @@ import * as L from 'leaflet';
 })
 export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
   selectedLivraison: LivraisonSimple | null = null;
-  map: any = null;
+  map: L.Map | null = null;
   isLoading = false;
-  isExpanded = false; // Toggle for bottom sheet expansion
+  isExpanded = false; 
   private timeouts: any[] = [];
+  private truckMarker: L.Marker | null = null;
+  private markerSource: L.Marker | null = null;
+  private markerDest: L.Marker | null = null;
+  private routeLayer: L.Polyline | null = null;
+  private routeGlow: L.Polyline | null = null;
+  private refreshInterval: any = null;
+  private refCoords: any = null;
+  private coordsCache: Map<string, {lat: number, lon: number}> = new Map();
 
   constructor(
     public navCtrl: NavController,
     private route: ActivatedRoute,
     private livraisonService: LivraisonService,
-    private http: HttpClient
+    private http: HttpClient,
+    private toastCtrl: ToastController
   ) {
     addIcons({ arrowBackOutline, notificationsOutline, logOutOutline, busOutline, analyticsOutline, locationOutline, businessOutline });
   }
@@ -38,20 +47,39 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
       const id = params['livraisonId'];
       if (id) {
         this.loadLivraison(+id);
+        this.startLiveTracking(+id);
       }
     });
   }
 
   ngOnDestroy() {
+    this.cleanup();
+  }
+
+  private cleanup() {
     this.timeouts.forEach(t => clearTimeout(t));
+    this.timeouts = [];
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
     if (this.map) {
       this.map.remove();
+      this.map = null;
     }
+    this.truckMarker = null;
+    this.markerSource = null;
+    this.markerDest = null;
+    this.routeLayer = null;
+    this.routeGlow = null;
   }
 
   ionViewDidEnter() {
-    if (this.selectedLivraison) {
+    // Only init map if not already done, otherwise just refresh size
+    if (!this.map && this.selectedLivraison) {
       this.initMap(this.selectedLivraison);
+    } else if (this.map) {
+      setTimeout(() => this.map?.invalidateSize(), 300);
     }
   }
 
@@ -60,168 +88,179 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
     this.livraisonService.getLivraisonById(id).subscribe({
       next: (livraison: LivraisonSimple) => {
         this.selectedLivraison = livraison;
-        // Si on est déjà dans la vue, on init, sinon ionViewDidEnter s'en chargera
-        if (this.map) {
+        if (!this.map) {
           this.initMap(livraison);
+        } else {
+          this.geocodeAndPlot(livraison);
         }
         this.isLoading = false;
       },
       error: (err: any) => {
-        console.error('Erreur chargement livraison pour la carte:', err);
+        console.error('Erreur chargement livraison:', err);
         this.isLoading = false;
       }
     });
   }
 
-  initMap(livraison: LivraisonSimple) {
-    // Wait for the container to be ready
-    setTimeout(() => {
-      if (this.map) {
-        this.map.remove();
-      }
-
-      // 1. Initialiser la carte centrée sur la Tunisie par défaut
-      this.map = L.map('osm-map', {
-        zoomControl: false, // On le placera manuellement si besoin
-        attributionControl: false
-      }).setView([33.8869, 9.5375], 6);
-
-      // 2. Ajouter les tuiles OpenStreetMap (Exactement comme sur le Web)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(this.map);
-
-      // 4. Force invalidateSize to fix the "gray area" or small map bug
-      const t1 = setTimeout(() => {
-        if (!this.map) return;
-        this.map.invalidateSize();
-        
-        // Force it again multiple times to be sure
-        const t2 = setTimeout(() => this.map?.invalidateSize(), 200);
-        const t3 = setTimeout(() => this.map?.invalidateSize(), 500);
-        const t4 = setTimeout(() => this.map?.invalidateSize(), 1000);
-        const t5 = setTimeout(() => this.map?.invalidateSize(), 2000);
-        this.timeouts.push(t2, t3, t4, t5);
-      }, 300);
-      this.timeouts.push(t1);
-
-      // 3. Géocoder et tracer la route
-      this.geocodeAndPlot(livraison);
-    }, 100);
+  startLiveTracking(id: number) {
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
+    this.refreshInterval = setInterval(() => {
+      this.livraisonService.getLivraisonById(id).subscribe(updated => {
+        if (this.selectedLivraison) {
+          this.selectedLivraison.currentLat = updated.currentLat;
+          this.selectedLivraison.currentLon = updated.currentLon;
+          this.selectedLivraison.speed = updated.speed;
+          this.selectedLivraison.statut = updated.statut;
+          this.selectedLivraison.camion = updated.camion;
+          
+          if (this.map && this.refCoords) {
+             // Efficient update without re-calculating geocoding
+             this.plotTruck(this.selectedLivraison, this.refCoords.lat1, this.refCoords.lon1, this.refCoords.lat2, this.refCoords.lon2);
+          }
+        }
+      });
+    }, 15000); // 15s to reduce mobile load
   }
 
-  geocodeAndPlot(livraison: LivraisonSimple) {
+  initMap(livraison: LivraisonSimple) {
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+
+    // Exact view from frontend
+    this.map = L.map('osm-map', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([33.8869, 9.5375], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    // Initial resize to fix tiling
+    setTimeout(() => {
+      if (this.map) this.map.invalidateSize();
+    }, 100);
+
+    this.geocodeAndPlot(livraison);
+  }
+
+  async geocodeAndPlot(livraison: LivraisonSimple) {
     const sourceCity = livraison.chargementVille || '';
     const destCity = livraison.livraisonVille || '';
-    if (!sourceCity || !destCity) return;
+    if (!this.map || !sourceCity || !destCity) return;
 
-    const urlBase = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=';
-    
-    // Geocode Source
-    this.http.get<any[]>(urlBase + encodeURIComponent(sourceCity + ', Tunisia')).subscribe(res1 => {
-        let lat1 = 36.8065, lon1 = 10.1815; // default Tunis
-        if(res1 && res1.length > 0) {
-            lat1 = parseFloat(res1[0].lat);
-            lon1 = parseFloat(res1[0].lon);
+    const getCoords = async (city: string) => {
+      const cacheKey = `${city}, Tunisia`;
+      if (this.coordsCache.has(cacheKey)) return this.coordsCache.get(cacheKey)!;
+      
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cacheKey)}`;
+        const res = await this.http.get<any[]>(url).toPromise();
+        if (res && res.length > 0) {
+          const coords = { lat: parseFloat(res[0].lat), lon: parseFloat(res[0].lon) };
+          this.coordsCache.set(cacheKey, coords);
+          return coords;
         }
+      } catch (e) { console.error('Geocoding error', e); }
+      return null;
+    };
 
-        // Marker Départ (Green)
-        L.marker([lat1, lon1], {
-            icon: L.divIcon({
-              className: 'custom-map-icon',
-              html: `<div class="marker-pin start"><ion-icon name="business-outline"></ion-icon></div>`,
-              iconSize: [30, 30],
-              iconAnchor: [15, 15]
-            })
-        }).addTo(this.map).bindPopup('Départ: ' + sourceCity);
+    const c1 = await getCoords(sourceCity) || { lat: 36.8065, lon: 10.1815 };
+    const c2 = await getCoords(destCity) || { lat: 34.7398, lon: 10.7600 };
 
-        // Geocode Destination
-        this.http.get<any[]>(urlBase + encodeURIComponent(destCity + ', Tunisia')).subscribe(res2 => {
-            let lat2 = 34.7398, lon2 = 10.7600; // default Sfax
-            if(res2 && res2.length > 0) {
-                lat2 = parseFloat(res2[0].lat);
-                lon2 = parseFloat(res2[0].lon);
-            }
+    if (!this.map) return;
 
-            // Marker Destination (Red)
-            L.marker([lat2, lon2], {
-                icon: L.divIcon({
-                  className: 'custom-map-icon',
-                  html: `<div class="marker-pin end"><ion-icon name="location-outline"></ion-icon></div>`,
-                  iconSize: [30, 30],
-                  iconAnchor: [15, 15]
-                })
-            }).addTo(this.map).bindPopup('Destination: ' + destCity);
+    // Marker Source
+    if (this.markerSource) this.markerSource.remove();
+    this.markerSource = L.marker([c1.lat, c1.lon], {
+        icon: L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style='background-color:#10b981; color:white; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold; font-size:18px;'>↑</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+    }).addTo(this.map).bindPopup('Départ: ' + sourceCity);
 
-            // Draw connecting path (Glowing effect)
-            const latlngs: L.LatLngTuple[] = [ [lat1, lon1], [lat2, lon2] ];
-            
-            // Path Shadow
-            L.polyline(latlngs, {
-                color: '#3b82f6',
-                weight: 8,
-                opacity: 0.15,
-                lineCap: 'round'
-            }).addTo(this.map);
+    // Marker Destination
+    if (this.markerDest) this.markerDest.remove();
+    this.markerDest = L.marker([c2.lat, c2.lon], {
+        icon: L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style='background-color:#ef4444; color:white; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold; font-size:18px;'>↓</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+    }).addTo(this.map).bindPopup('Destination: ' + destCity);
 
-            // Path Main
-            const polyline = L.polyline(latlngs, {
-                color: '#3b82f6', 
-                weight: 4, 
-                dashArray: '10, 15',
-                lineCap: 'round'
-            }).addTo(this.map);
-            
-            // Adjust bounds
-            this.map.fitBounds(polyline.getBounds(), { padding: [100, 100] });
+    this.refCoords = { lat1: c1.lat, lon1: c1.lon, lat2: c2.lat, lon2: c2.lon };
+    
+    // Polyline
+    if (this.routeLayer) this.routeLayer.remove();
+    this.routeLayer = L.polyline([[c1.lat, c1.lon], [c2.lat, c2.lon]], {
+      color: '#3b82f6', 
+      weight: 4, 
+      dashArray: '5, 10'
+    }).addTo(this.map);
 
-            this.plotTruck(livraison, lat1, lon1, lat2, lon2);
-        });
-    });
+    this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50], animate: false });
+    this.plotTruck(livraison, c1.lat, c1.lon, c2.lat, c2.lon);
   }
 
   plotTruck(livraison: any, lat1: number, lon1: number, lat2: number, lon2: number) {
+    if (!this.map) return;
     const statut = livraison.statut;
-    
-    let truckLat = 0;
-    let truckLon = 0;
-    let gpsActif = false;
+    let truckLat = 0, truckLon = 0, gpsActif = false;
 
-    // 1. Priorité : Coordonnées GPS réelles (si disponibles via API)
     if (livraison.currentLat && livraison.currentLon) {
         truckLat = livraison.currentLat;
         truckLon = livraison.currentLon;
         gpsActif = true;
     } else {
-        // 2. Mode Simulation (basé sur le statut comme sur le Web)
+        // Mode Dégradé from Frontend
         let ratio = 0.5;
         if (['NON_PLANIFIE', 'PLANIFIE'].includes(statut)) ratio = 0.0;
         else if (['EN_COURS_DE_CHARGEMENT', 'CHARGE'].includes(statut)) ratio = 0.1;
         else if (['LIVRE', 'Fin'].includes(statut)) ratio = 1.0;
-        
         truckLat = lat1 + (lat2 - lat1) * ratio;
         truckLon = lon1 + (lon2 - lon1) * ratio;
     }
 
     const color = gpsActif ? '#10b981' : '#f5921e';
+    const gpsLabel = gpsActif ? "<br><span style='color:green; font-weight:bold;'>Connexion GPS Live ✓</span>" : "<br><span style='color:orange;'>Position Estimée (Pas de Signal)</span>";
+    const speed = livraison.speed || 0;
+    const truckInfo = livraison.camion ? `<br><b>Camion:</b> ${livraison.camion}` : '';
 
-    L.marker([truckLat, truckLon], {
-        icon: L.divIcon({
-           className: 'custom-map-icon',
-           html: `<div class="truck-marker" style="background-color:${color}"><ion-icon name="bus-outline"></ion-icon></div>`,
-           iconSize: [48, 48],
-           iconAnchor: [24, 24]
-        })
-    }).addTo(this.map).bindPopup(`<b>Transporteur</b><br>${livraison.chauffeur || 'En route'}`);
+    const popupContent = `
+        <div style="font-family: Arial, sans-serif; min-width: 150px;">
+            <b style="color:#2563eb; font-size:14px;">Ordre: ${livraison.orderNumber || livraison.id}</b>
+            ${truckInfo}
+            <br><b>Chauffeur:</b> ${livraison.chauffeur || 'Non assigné'}
+            <br><b>Vitesse:</b> <span style="color:${speed > 0 ? 'green' : 'red'}; font-weight:bold;">${speed} km/h</span>
+            <hr style="margin: 5px 0;">
+            ${gpsLabel}
+        </div>
+    `;
 
-    // Follow truck if GPS is active or it's the first plot
-    if (gpsActif) {
-        this.map.panTo([truckLat, truckLon], { animate: true });
+    if (this.truckMarker) {
+        this.truckMarker.setLatLng([truckLat, truckLon]);
+        this.truckMarker.setPopupContent(popupContent);
+    } else {
+        this.truckMarker = L.marker([truckLat, truckLon], {
+            icon: L.divIcon({
+               className: 'custom-div-icon',
+               html: `<div style='background-color:${color}; color:white; border-radius:5px; padding:5px; font-size:16px; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold;'>🚛</div>`,
+               iconSize: [36, 36],
+               iconAnchor: [18, 18]
+            })
+        }).bindPopup(popupContent).addTo(this.map!);
     }
   }
 
   getStatusKey(statut: string): string {
-    const map: Record<string, string> = {
+    const mapStatuses: Record<string, string> = {
       NON_CONFIRME: 'pending',
       NON_PLANIFIE: 'pending',
       EN_ATTENTE: 'pending',
@@ -232,7 +271,7 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
       LIVRE: 'done',
       FIN: 'done'
     };
-    return map[statut] || 'pending';
+    return mapStatuses[statut] || 'pending';
   }
 
   getStatusLabel(statut: string): string {
@@ -252,11 +291,24 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
 
   toggleExpand() {
     this.isExpanded = !this.isExpanded;
+    setTimeout(() => {
+      if (this.map) this.map.invalidateSize();
+    }, 300);
   }
 
-  replotRoute() {
+  async replotRoute() {
     if (this.selectedLivraison && this.map) {
+      console.log('🔄 Replotting route (exact frontend style)...');
       this.geocodeAndPlot(this.selectedLivraison);
+      
+      const toast = await this.toastCtrl.create({
+        message: 'Mise à jour du tracé...',
+        duration: 1500,
+        position: 'top',
+        color: 'primary',
+        cssClass: 'custom-toast'
+      });
+      toast.present();
     }
   }
 
@@ -264,4 +316,5 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
     this.navCtrl.navigateRoot('/login');
   }
 }
+
 

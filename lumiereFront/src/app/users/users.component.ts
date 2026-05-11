@@ -31,7 +31,15 @@ export class UsersComponent {
     lastname: "",
     email: "",
     password: "",
-    role: "CLIENT"
+    role: "CLIENT",
+    civilite: '',
+    telephone: '',
+    adresse: '',
+    ville: '',
+    pays: 'Tunisie',
+    codepostal: 0,
+    type: 'Standard',
+    societeFacturation: ''
   }
 
   // Approval Modal properties
@@ -177,7 +185,15 @@ export class UsersComponent {
           lastname: '',
           email: '',
           password: '',
-          role: 'CLIENT'
+          role: 'CLIENT',
+          civilite: '',
+          telephone: '',
+          adresse: '',
+          ville: '',
+          pays: 'Tunisie',
+          codepostal: 0,
+          type: 'Standard',
+          societeFacturation: ''
         };
         this.closeModal();
         this.loadUsers();

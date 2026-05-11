@@ -73,7 +73,14 @@ public record AuthController(AuthenticationService authenticationService, UserRe
 
     @GetMapping("/profileALL")
     public List<User> getALLProfile() {
-        List<User> user = userRepository.findAll();
-        return user;
+        List<User> users = userRepository.findAll();
+        users.forEach(u -> {
+            if (!u.getOwnedClients().isEmpty()) {
+                com.example.demo.Entity.Client firstClient = u.getOwnedClients().get(0);
+                u.setRegistrationApproved(firstClient.isRegistrationApproved());
+                u.setLinkedClientId(firstClient.getCode());
+            }
+        });
+        return users;
     }
 }

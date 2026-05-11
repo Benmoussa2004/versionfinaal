@@ -1,4 +1,4 @@
-﻿<div class="auth-wrapper">
+<div class="auth-wrapper">
     <div class="auth-card register-wide">
         <div class="auth-header">
             <div class="auth-logo">
@@ -13,12 +13,16 @@
             <div class="success-icon">
                 <i class="fas fa-check-circle"></i>
             </div>
-            <h3>Inscription réussie !</h3>
+            <h3>Inscription effectuée !</h3>
             <div class="success-details">
-                <p><i class="fas fa-envelope"></i> Confirmation envoyée à <strong>{{user.email}}</strong></p>
-                <p><i class="fas fa-clock"></i> En attente de validation par l'administrateur</p>
+                <p><i class="fas fa-envelope"></i> Un email de confirmation a été envoyé à <strong>{{user.email}}</strong></p>
+                <p><i class="fas fa-clock"></i> <strong>Statut : En attente de validation</strong></p>
+                <p>Votre compte doit être activé par un administrateur OTFLOW avant que vous puissiez vous connecter. Vous recevrez une notification par email dès que votre accès sera validé.</p>
             </div>
-            <p class="redirect-hint">Redirection en cours...</p>
+            <button class="auth-btn secondary" routerLink="/login">
+                <i class="fas fa-arrow-left"></i>
+                <span>Retour à la connexion</span>
+            </button>
         </div>
 
         <!-- Registration Form -->
