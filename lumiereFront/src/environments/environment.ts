@@ -1,5 +1,5 @@
 // ⚠️ Modifier uniquement cette ligne pour changer l'adresse IP du backend
-const BASE_URL = 'http://172.18.101.192:8090';
+const BASE_URL = 'http://192.168.1.127:8090';
 
 export const environment = {
     production: false,
@@ -12,6 +12,3 @@ export const environment = {
     adminUrl: `${BASE_URL}/api/v1/admin`,
     demoUrl: `${BASE_URL}/api/v1/demo`
 };
-
-
-
