@@ -14,16 +14,15 @@
 }
 
 .map-container {
-    width: 100vw !important;
-    height: 100vh !important;
-    position: fixed !important;
+    width: 100%;
+    height: 100%;
+    position: absolute !important;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1;
     background: #e2e8f0;
-    /* Hardware acceleration for mobile performance */
-    transform: translate3d(0,0,0);
-    will-change: transform;
 }
 
 /* --- Floating Header --- */
@@ -129,6 +128,34 @@
 
         &.start { background: #10b981; }
         &.end { background: #ef4444; }
+    }
+
+    /* Exact Frontend Map Markers */
+    .map-marker-pro {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        border: 2px solid white;
+        transition: transform 0.3s ease;
+        z-index: 1000;
+
+        &.start {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        &.end {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        &:hover {
+            transform: scale(1.2);
+        }
     }
 
   .truck-marker {

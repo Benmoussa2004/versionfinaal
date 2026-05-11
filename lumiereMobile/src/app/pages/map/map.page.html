@@ -97,6 +97,11 @@
             <ion-icon name="cube-outline"></ion-icon>
             <span>{{ selectedLivraison.nombrePalettes || 0 }} palettes</span>
           </div>
+          <div class="spec">
+            <ion-icon name="route-outline" src="assets/icon/route.svg" *ngIf="!totalDistance"></ion-icon>
+            <i class="fa-solid fa-road" style="color:#94a3b8; margin-right:5px;"></i>
+            <span>{{ totalDistance }} km</span>
+          </div>
           <div class="spec" *ngIf="selectedLivraison.voycle">
             <ion-icon name="layers-outline"></ion-icon>
             <span>Voy. {{ selectedLivraison.voycle }}</span>

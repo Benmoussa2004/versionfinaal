@@ -22,6 +22,7 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
   map: L.Map | null = null;
   isLoading = false;
   isExpanded = false; 
+  totalDistance: string = '0';
   private timeouts: any[] = [];
   private truckMarker: L.Marker | null = null;
   private markerSource: L.Marker | null = null;
@@ -75,11 +76,18 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
   }
 
   ionViewDidEnter() {
-    // Only init map if not already done, otherwise just refresh size
-    if (!this.map && this.selectedLivraison) {
+    // Force immediate size calculation
+    if (this.map) {
+      setTimeout(() => {
+        this.map?.invalidateSize();
+        console.log('🔄 Map size invalidated');
+      }, 100);
+      
+      // Secondary check for slow mobile renders
+      setTimeout(() => this.map?.invalidateSize(), 500);
+      setTimeout(() => this.map?.invalidateSize(), 1500);
+    } else if (this.selectedLivraison) {
       this.initMap(this.selectedLivraison);
-    } else if (this.map) {
-      setTimeout(() => this.map?.invalidateSize(), 300);
     }
   }
 
@@ -136,7 +144,7 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(this.map);
 
     // Initial resize to fix tiling
@@ -153,57 +161,78 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
     if (!this.map || !sourceCity || !destCity) return;
 
     const getCoords = async (city: string) => {
+      if (!city) return null;
       const cacheKey = `${city}, Tunisia`;
       if (this.coordsCache.has(cacheKey)) return this.coordsCache.get(cacheKey)!;
       
-      try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cacheKey)}`;
-        const res = await this.http.get<any[]>(url).toPromise();
-        if (res && res.length > 0) {
-          const coords = { lat: parseFloat(res[0].lat), lon: parseFloat(res[0].lon) };
-          this.coordsCache.set(cacheKey, coords);
-          return coords;
-        }
-      } catch (e) { console.error('Geocoding error', e); }
+      const searchQueries = [
+        `${city}, Tunisia`,
+        city,
+        city.split(' ').pop() + ', Tunisia' // Try just the last word (e.g. Grombalia)
+      ];
+
+      for (const query of searchQueries) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+          const res = await this.http.get<any[]>(url).toPromise();
+          if (res && res.length > 0) {
+            const coords = { lat: parseFloat(res[0].lat), lon: parseFloat(res[0].lon) };
+            this.coordsCache.set(cacheKey, coords);
+            console.log(`✅ Geocoded [${query}] ->`, coords);
+            return coords;
+          }
+        } catch (e) { console.error(`Geocoding error for [${query}]`, e); }
+      }
       return null;
     };
 
     const c1 = await getCoords(sourceCity) || { lat: 36.8065, lon: 10.1815 };
     const c2 = await getCoords(destCity) || { lat: 34.7398, lon: 10.7600 };
 
+    console.log('📍 Map Plotting:', { source: sourceCity, c1, dest: destCity, c2 });
+
     if (!this.map) return;
 
-    // Marker Source
+    // Marker Source (Exact Frontend Style)
     if (this.markerSource) this.markerSource.remove();
     this.markerSource = L.marker([c1.lat, c1.lon], {
         icon: L.divIcon({
           className: 'custom-div-icon',
-          html: `<div style='background-color:#10b981; color:white; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold; font-size:18px;'>↑</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
+          html: `<div class="map-marker-pro start"><i class="fa fa-warehouse"></i></div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
         })
     }).addTo(this.map).bindPopup('Départ: ' + sourceCity);
 
-    // Marker Destination
+    // Marker Destination (Exact Frontend Style)
     if (this.markerDest) this.markerDest.remove();
     this.markerDest = L.marker([c2.lat, c2.lon], {
         icon: L.divIcon({
           className: 'custom-div-icon',
-          html: `<div style='background-color:#ef4444; color:white; border-radius:50%; width:30px; height:30px; display:flex; justify-content:center; align-items:center; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold; font-size:18px;'>↓</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
+          html: `<div class="map-marker-pro end"><i class="fa fa-flag-checkered"></i></div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
         })
     }).addTo(this.map).bindPopup('Destination: ' + destCity);
 
     this.refCoords = { lat1: c1.lat, lon1: c1.lon, lat2: c2.lat, lon2: c2.lon };
     
-    // Polyline
+    // Polyline (Royal Blue with Glow)
     if (this.routeLayer) this.routeLayer.remove();
-    this.routeLayer = L.polyline([[c1.lat, c1.lon], [c2.lat, c2.lon]], {
-      color: '#3b82f6', 
-      weight: 4, 
-      dashArray: '5, 10'
+    if (this.routeGlow) this.routeGlow.remove();
+
+    this.routeGlow = L.polyline([[c1.lat, c1.lon], [c2.lat, c2.lon]], {
+      color: '#3b82f6', weight: 8, opacity: 0.2
     }).addTo(this.map);
+
+    this.routeLayer = L.polyline([[c1.lat, c1.lon], [c2.lat, c2.lon]], {
+      color: '#2563eb', weight: 4, opacity: 0.9, dashArray: '10, 10'
+    }).addTo(this.map);
+
+    // Calculate Distance
+    const p1 = L.latLng(c1.lat, c1.lon);
+    const p2 = L.latLng(c2.lat, c2.lon);
+    this.totalDistance = (p1.distanceTo(p2) / 1000).toFixed(1);
 
     this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50], animate: false });
     this.plotTruck(livraison, c1.lat, c1.lon, c2.lat, c2.lon);
@@ -214,24 +243,35 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
     const statut = livraison.statut;
     let truckLat = 0, truckLon = 0, gpsActif = false;
 
-    if (livraison.currentLat && livraison.currentLon) {
+    console.log('🚛 Plotting Truck for:', livraison.orderNumber || livraison.id, { currentLat: livraison.currentLat, currentLon: livraison.currentLon, statut });
+
+    if (livraison.currentLat && livraison.currentLon && livraison.currentLat !== 0) {
         truckLat = livraison.currentLat;
         truckLon = livraison.currentLon;
         gpsActif = true;
     } else {
         // Mode Dégradé from Frontend
         let ratio = 0.5;
-        if (['NON_PLANIFIE', 'PLANIFIE'].includes(statut)) ratio = 0.0;
-        else if (['EN_COURS_DE_CHARGEMENT', 'CHARGE'].includes(statut)) ratio = 0.1;
-        else if (['LIVRE', 'Fin'].includes(statut)) ratio = 1.0;
+        if (['NON_PLANIFIE', 'PLANIFIE'].includes(statut)) ratio = 0.05; // Start
+        else if (['EN_COURS_DE_CHARGEMENT', 'CHARGE'].includes(statut)) ratio = 0.15;
+        else if (['EN_COURS_DE_LIVRAISON', 'EN_LIVRAISON'].includes(statut)) ratio = 0.6;
+        else if (['LIVRE', 'Fin', 'FIN'].includes(statut)) ratio = 1.0;
+        
         truckLat = lat1 + (lat2 - lat1) * ratio;
         truckLon = lon1 + (lon2 - lon1) * ratio;
+    }
+
+    // Sanity check
+    if (!truckLat || !truckLon || isNaN(truckLat) || isNaN(truckLon)) {
+      console.warn('❌ Invalid truck coordinates, using center of route');
+      truckLat = (lat1 + lat2) / 2;
+      truckLon = (lon1 + lon2) / 2;
     }
 
     const color = gpsActif ? '#10b981' : '#f5921e';
     const gpsLabel = gpsActif ? "<br><span style='color:green; font-weight:bold;'>Connexion GPS Live ✓</span>" : "<br><span style='color:orange;'>Position Estimée (Pas de Signal)</span>";
     const speed = livraison.speed || 0;
-    const truckInfo = livraison.camion ? `<br><b>Camion:</b> ${livraison.camion}` : '';
+    const truckInfo = (livraison.matricule || livraison.camion) ? `<br><b>Camion:</b> ${livraison.matricule || livraison.camion}` : '';
 
     const popupContent = `
         <div style="font-family: Arial, sans-serif; min-width: 150px;">
@@ -251,11 +291,17 @@ export class MapPage implements OnInit, OnDestroy, ViewDidEnter {
         this.truckMarker = L.marker([truckLat, truckLon], {
             icon: L.divIcon({
                className: 'custom-div-icon',
-               html: `<div style='background-color:${color}; color:white; border-radius:5px; padding:5px; font-size:16px; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.5); font-weight:bold;'>🚛</div>`,
+               html: `<div style='background-color:${color}; color:white; border-radius:5px; padding:5px; font-size:16px; border:2px solid white; box-shadow:0 0 10px rgba(0,0,0,0.5);'><i class='fa fa-truck'></i></div>`,
                iconSize: [36, 36],
                iconAnchor: [18, 18]
             })
         }).bindPopup(popupContent).addTo(this.map!);
+    }
+    
+    // Ensure truck is visible
+    if (gpsActif && this.map) {
+      // If we have live GPS, maybe pan to it?
+      // this.map.panTo([truckLat, truckLon]);
     }
   }
 
