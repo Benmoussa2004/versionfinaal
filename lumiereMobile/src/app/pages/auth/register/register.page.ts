@@ -1,4 +1,4 @@
-﻿import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -123,7 +123,7 @@ export class RegisterPage {
       lastname: this.formData.lastname,
       email: this.formData.email,
       password: this.formData.password,
-      role: 'USER'
+      role: 'USER_OTFLOW'
     };
 
     // 4️⃣ Call backend

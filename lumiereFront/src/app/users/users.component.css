@@ -294,46 +294,101 @@
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35) !important;
 }
 
+/* ── Role Tags ── */
+.role-tag {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-tag[data-role="ADMIN"] { background: #fee2e2; color: #ef4444; }
+.role-tag[data-role="COMMERCIAL"] { background: #fef3c7; color: #d97706; }
+.role-tag[data-role="CLIENT"] { background: #dcfce7; color: #16a34a; }
+.role-tag[data-role="USER_LUMIERE"] { background: #e0f2fe; color: #0284c7; }
+.role-tag[data-role="USER_OTFLOW"] { background: #f5f3ff; color: #8b5cf6; }
+.role-tag[data-role="USER"] { background: #f1f5f9; color: #64748b; }
+
 /* ── Action Orbit Buttons ── */
 .action-orbit {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
 }
 
 .orbit-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
-  color: white !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white !important;
+  position: relative;
+  overflow: hidden;
 }
 
+.orbit-btn i {
+  transition: all 0.3s;
+  z-index: 2;
+}
+
+/* Base colors for icons */
+.orbit-btn.success i { color: #10b981; }
+.orbit-btn.danger i { color: #ef4444; }
+.orbit-btn.warning i { color: #f59e0b; }
+.orbit-btn.info i { color: #3b82f6; }
+
+.orbit-btn.success { border-color: #dcfce7; }
+.orbit-btn.danger { border-color: #fee2e2; }
+.orbit-btn.warning { border-color: #fef3c7; }
+.orbit-btn.info { border-color: #dbeafe; }
+
+/* Hover effects: Fill color and white icon */
 .orbit-btn:hover {
-  transform: translateY(-3px) rotate(8deg);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
 }
 
-.orbit-btn.success {
-  background: #10b981 !important;
+.orbit-btn.success:hover { background: #10b981 !important; }
+.orbit-btn.danger:hover { background: #ef4444 !important; }
+.orbit-btn.warning:hover { background: #f59e0b !important; }
+.orbit-btn.info:hover { background: #3b82f6 !important; }
+
+.orbit-btn:hover i {
+  color: white !important;
+  transform: scale(1.1);
 }
 
-.orbit-btn.danger {
-  background: #ef4444 !important;
+/* Special tooltip-like hint on hover (optional enhancement) */
+.orbit-btn::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-5px);
+  padding: 4px 8px;
+  background: #1e293b;
+  color: white;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
 }
 
-.orbit-btn.warning {
-  background: #f59e0b !important;
-}
-
-.orbit-btn.info {
-  background: #3b82f6 !important;
+.orbit-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-10px);
 }
 
 .modal {

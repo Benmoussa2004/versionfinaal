@@ -85,7 +85,7 @@
             <td>
               <!-- Full power column for admins and commercials -->
               <div class="action-orbit"
-                *ngIf="currentUserRole === 'ADMIN' || currentUserRole === 'COMMERCIAL' || currentUserRole === 'USER_Otflow'">
+                *ngIf="currentUserRole === 'ADMIN' || currentUserRole === 'COMMERCIAL' || currentUserRole === 'USER_OTFLOW'">
 
                 <!-- Approve -->
                 <button class="orbit-btn success" *ngIf="client.status === 'PENDING'" 
@@ -174,7 +174,7 @@
                   <option value="CLIENT">CLIENT</option>
                   <option value="COMMERCIAL">COMMERCIAL</option>
                   <option value="ADMIN">ADMIN</option>
-                  <option value="USER_Otflow">Otflow EMPLOYEE</option>
+                  <option value="USER_OTFLOW">Otflow EMPLOYEE</option>
                 </select>
               </div>
             </div>

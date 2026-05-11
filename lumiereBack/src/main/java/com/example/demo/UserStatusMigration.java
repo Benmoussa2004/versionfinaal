@@ -59,6 +59,22 @@ public class UserStatusMigration implements CommandLineRunner {
                 log.warn("⚠️ Failed to add AUTO_INCREMENT to notifications.id: {}", e.getMessage());
             }
 
+            // Fix: Add USER_OTFLOW to role enum in _user table
+            try {
+                jdbcTemplate.execute("ALTER TABLE _user MODIFY COLUMN role ENUM('ADMIN','CLIENT','COMMERCIAL','SUPERADMIN','USER','USER_LUMIERE','USER_OTFLOW')");
+                log.info("✅ Database fix: Added USER_OTFLOW to _user.role enum");
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to update _user.role enum: {}", e.getMessage());
+            }
+
+            // Fix: Add USER_OTFLOW to role enum in role_permissions table
+            try {
+                jdbcTemplate.execute("ALTER TABLE role_permissions MODIFY COLUMN role ENUM('ADMIN','CLIENT','COMMERCIAL','SUPERADMIN','USER','USER_LUMIERE','USER_OTFLOW')");
+                log.info("✅ Database fix: Added USER_OTFLOW to role_permissions.role enum");
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to update role_permissions.role enum: {}", e.getMessage());
+            }
+
         } catch (Exception e) {
             log.error("❌ Error during schema migration: {}", e.getMessage());
         } finally {

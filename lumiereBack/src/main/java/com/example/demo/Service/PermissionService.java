@@ -112,8 +112,8 @@ public class PermissionService {
                 if (repository.findByRoleAndFeatureKey(role, feature).isEmpty()) {
                     boolean enabled = (role == Role.ADMIN || role == Role.SUPERADMIN || role == Role.COMMERCIAL);
 
-                    // Defaults for CLIENT / USER_LUMIERE / USER
-                    if ((role == Role.CLIENT || role == Role.USER_LUMIERE || role == Role.USER)) {
+                    // Defaults for CLIENT / USER_LUMIERE / USER / USER_OTFLOW
+                    if ((role == Role.CLIENT || role == Role.USER_LUMIERE || role == Role.USER || role == Role.USER_OTFLOW)) {
                         List<String> allowedForAll = Arrays.asList(
                                 "DASHBOARD", "ORDRES", "ORDRES_TRACK", "EMAILS");
                         if (allowedForAll.contains(feature)) {
