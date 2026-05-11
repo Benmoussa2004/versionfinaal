@@ -1,4 +1,4 @@
-﻿// src/app/services/livraison.service.ts
+// src/app/services/livraison.service.ts
 // Adapté pour fonctionner avec le backend Otflow réel
 // Les livraisons correspondent aux ordres avec statut EN_COURS_DE_LIVRAISON ou LIVRE
 
@@ -30,6 +30,9 @@ export interface LivraisonSimple {
   volume?: number;
   siteclient?: string;
   codeArticle?: string;
+  currentLat?: number;
+  currentLon?: number;
+  speed?: number;
 }
 
 @Injectable({

@@ -1,4 +1,4 @@
-﻿import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { CommonModule } from '@angular/common';
@@ -201,13 +201,18 @@ export class AppComponent {
         this.showNav = TAB_ROUTES.some(r => this.currentUrl.startsWith(r));
 
         // 🛡️ Focus Management: Resolve "aria-hidden focus" blocker
+        // Explicitly blur the current focused element to prevent it from being "trapped" in a hidden page
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+
         setTimeout(() => {
-          const activePage = document.querySelector('ion-router-outlet > .ion-page');
+          const activePage = document.querySelector('ion-router-outlet > .ion-page:not(.ion-page-hidden)');
           if (activePage) {
             activePage.removeAttribute('aria-hidden');
             (activePage as HTMLElement).focus();
           }
-        }, 300);
+        }, 100);
       });
 
     this.loadingService.hide();

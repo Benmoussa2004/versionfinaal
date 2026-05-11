@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
@@ -196,8 +196,6 @@ export class HomePage implements OnInit {
 
 
   ngOnInit() {
-    this.loadAllData();
-
     // Check for login success flag
     const showLoginSuccess = sessionStorage.getItem('login_success');
     if (showLoginSuccess) {

@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   height: 100%;
 }
@@ -8,7 +8,7 @@
 }
 
 .home-body {
-  padding: 0 16px 100px;
+  padding: 0 16px 120px;
 }
 
 // ── Header Level 2: Greeting ──
@@ -127,7 +127,7 @@
 
 // ── Section Styles ──
 section {
-  margin-top: 14px;
+  margin-top: 24px;
 }
 
 .sec-label {
@@ -273,7 +273,8 @@ section {
 
 // ── Chatbot Pill Card ──
 .chatbot-section {
-  margin-top: 16px;
+  margin-top: 24px;
+  margin-bottom: 20px;
 }
 
 .chatbot-pill-card {
@@ -386,5 +387,5 @@ section {
 }
 
 .spacer {
-  height: 60px;
+  height: 80px;
 }

@@ -34,32 +34,33 @@ public class GpsSyncService {
      */
     @Scheduled(fixedRate = 120000)
     public void syncGpsPositions() {
-        log.info("Starting GPS Sync with Rimtrack...");
-
-        // 1. Get all orders that are currently "EN_COURS_DE_LIVRAISON" or "CHARGE" or
-        // "PLANIFIE"
-        // and have a truck assigned
+        log.info("📡 Starting GPS Sync with Rimtrack (IP: 172.18.3.77)...");
+        
+        try {
+            // Quick check if Rimtrack DB is even reachable
+            rimtrackJdbcTemplate.execute("SELECT 1");
+            log.info("✅ Connection to Rimtrack DB verified.");
+        } catch (Exception e) {
+            log.error("❌ CRITICAL: Cannot reach Rimtrack Database. Is your VPN/Network active? Error: {}", e.getMessage());
+            return;
+        }
         List<Ordre> activeOrders = ordreRepository.findAll().stream()
-                .filter(o -> o.getCamion() != null && !o.getCamion().isEmpty())
+                .filter(o -> o.getCamion() != null && !o.getCamion().trim().isEmpty())
                 .filter(o -> isTrackingNeeded(o.getStatut()))
                 .toList();
 
         if (activeOrders.isEmpty()) {
-            log.info("No active orders found for GPS tracking.");
+            log.info("ℹ️ No active orders found with trucks for GPS tracking.");
             return;
         }
 
+        log.info("🔍 Found {} orders requiring GPS sync.", activeOrders.size());
+
         for (Ordre ordre : activeOrders) {
             try {
-                String camion = ordre.getCamion();
-                if (camion == null || camion.isEmpty()) {
-                    log.debug("Skipping order {} because camion is null despite status {}", ordre.getOrderNumber(),
-                            ordre.getStatut());
-                    continue;
-                }
                 updateOrderPosition(ordre);
             } catch (Exception e) {
-                log.error("Failed to update GPS for order {}: {}", ordre.getOrderNumber(), e.getMessage());
+                log.error("⚠️ Failed to update GPS for order {}: {}", ordre.getOrderNumber(), e.getMessage());
             }
         }
     }
@@ -74,37 +75,30 @@ public class GpsSyncService {
 
     private void updateOrderPosition(Ordre ordre) {
         String camion = ordre.getCamion().trim();
-        
-        // Query logic: 
-        // 1. Find device id for this truck name/plate
-        // 2. Find latest activity for this device
-        
-        // Note: Table names and columns are guessed based on standard Rimtrack/GPS structures.
-        // We will refine once the user provides the exact mapping table.
+        log.info("🚛 Processing Truck: {}", camion);
         
         try {
             // Step 1: Mapping Camion -> id_device
-            // On passe par 'vehicule' pour trouver le vehicule_id, puis par 'device' pour trouver le id_device
             String mappingQuery = 
                 "SELECT d.id_device " +
                 "FROM vehicule v " +
                 "JOIN device d ON v.vehicule_id = d.vehicule_id " +
-                "WHERE v.matricule LIKE ? OR v.alias LIKE ? LIMIT 1";
+                "WHERE LOWER(v.matricule) LIKE LOWER(?) OR LOWER(v.alias) LIKE LOWER(?) LIMIT 1";
             
             List<Long> deviceIds = rimtrackJdbcTemplate.queryForList(mappingQuery, Long.class, "%" + camion + "%", "%" + camion + "%");
             
             if (deviceIds.isEmpty()) {
-                log.warn("Aucun boîtier (id_device) trouvé dans Rimtrack pour le camion : {}", camion);
+                log.warn("❓ No device mapping found for truck [{}] in Rimtrack mapping table.", camion);
                 return;
             }
             
             Long idDevice = deviceIds.get(0);
+            log.info("📍 Found Device ID [{}] for truck [{}]", idDevice, camion);
             
-            // Step 2: Récupérer la dernière position dans la table archive spécifique au boîtier (ex: arch_303)
+            // Step 2: Récupérer la dernière position
             String dynamicTable = "rimtrack_archive.arch_" + idDevice;
             String posQuery = "SELECT latitude, longitude, speed, date FROM " + dynamicTable + " ORDER BY `date` DESC LIMIT 1";
             
-            log.debug("Fetching coordinates from dynamic table: {}", dynamicTable);
             List<Map<String, Object>> posData = rimtrackJdbcTemplate.queryForList(posQuery);
 
             if (!posData.isEmpty()) {
@@ -116,20 +110,22 @@ public class GpsSyncService {
                 if (lat != null && lon != null && lat != 0 && lon != 0) {
                     ordre.setCurrentLat(lat);
                     ordre.setCurrentLon(lon);
-                    ordre.setSpeed(speed); // Sauvegarde de la vitesse
+                    ordre.setSpeed(speed);
                     ordreRepository.save(ordre);
-                    log.info("Updated GPS for Order {}: {}/{} (Speed: {} km/h)", 
+                    log.info("✨ SUCCESS: Updated Order {} position: {}, {} @ {} km/h", 
                         ordre.getOrderNumber(), lat, lon, speed);
+                } else {
+                    log.warn("⚠️ Received [0,0] coordinates for device {}, skipping.", idDevice);
                 }
+            } else {
+                log.warn("📭 No archive data found in {} for device {}.", dynamicTable, idDevice);
             }
         } catch (Exception e) {
-            // If tables dont exist yet, we log it
-            // We might need to try current_position table directly if id_device is not known.
-            log.error("SQL Error during GPS sync for {}: {}", camion, e.getMessage());
+            log.error("❌ SQL ERROR during GPS sync for {}: {}. (Tip: If table arch_XXX doesn't exist yet, this is expected for new devices)", 
+                camion, e.getMessage());
         }
     }
     
-    // Manual trigger for testing
     public void forceSync() {
         syncGpsPositions();
     }

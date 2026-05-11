@@ -117,14 +117,15 @@ public class UserStatusMigration implements CommandLineRunner {
             log.info("✅ No user status migration needed");
         }
 
-        // Ensure the main admin user exists and has SUPERADMIN role
+        // Ensure the main admin user exists and has ADMIN role
         String adminEmail = "razanshriif@gmail.com";
         userRepository.findFirstByEmailOrderByIdAsc(adminEmail).ifPresentOrElse(
                 user -> {
-                    if (user.getRole() != Role.SUPERADMIN && user.getRole() != Role.ADMIN) {
-                        user.setRole(Role.SUPERADMIN);
+                    // Update to ADMIN if they have a lower role, or downgrade from SUPERADMIN if requested
+                    if (user.getRole() != Role.ADMIN) {
+                        user.setRole(Role.ADMIN);
                         userRepository.save(user);
-                        log.info("✅ Updated existing user {} to SUPERADMIN role", adminEmail);
+                        log.info("✅ Updated user {} to ADMIN role", adminEmail);
                     }
                 },
                 () -> {
@@ -133,10 +134,10 @@ public class UserStatusMigration implements CommandLineRunner {
                     admin.setLastname("Shriif");
                     admin.setEmail(adminEmail);
                     admin.setPasswd(passwordEncoder.encode("123456"));
-                    admin.setRole(Role.SUPERADMIN);
+                    admin.setRole(Role.ADMIN);
                     admin.setStatus(Status.ACTIVE);
                     userRepository.save(admin);
-                    log.info("✅ Created NEW superadmin user: {}", adminEmail);
+                    log.info("✅ Created NEW admin user: {}", adminEmail);
                 });
     }
 }

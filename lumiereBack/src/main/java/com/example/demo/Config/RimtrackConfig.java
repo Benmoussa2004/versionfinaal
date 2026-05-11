@@ -1,5 +1,6 @@
 package com.example.demo.Config;
 
+import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -17,15 +18,15 @@ public class RimtrackConfig {
     @Primary
     @Bean(name = "dataSource")
     @ConfigurationProperties(prefix = "spring.datasource")
-    public DataSource dataSource() {
-        return DataSourceBuilder.create().build();
+    public HikariDataSource dataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
     }
 
     // --- BASE GPS RIMTRACK ---
     @Bean(name = "rimtrackDataSource")
     @ConfigurationProperties(prefix = "rimtrack.datasource")
-    public DataSource rimtrackDataSource() {
-        return DataSourceBuilder.create().build();
+    public HikariDataSource rimtrackDataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
     }
 
     @Primary

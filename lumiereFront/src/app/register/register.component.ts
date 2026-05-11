@@ -1,4 +1,4 @@
-﻿import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -43,10 +43,7 @@ export class RegisterComponent {
                 response => {
                     this.success = true;
                     this.error = '';
-                    // Optionally redirect after a few seconds
-                    setTimeout(() => {
-                        this.router.navigate(['/login']);
-                    }, 3000);
+                    // Do NOT redirect immediately. Show the success message which should explain the pending status.
                 },
                 error => {
                     console.error('Registration failed', error);

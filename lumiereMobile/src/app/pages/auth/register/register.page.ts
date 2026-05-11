@@ -117,13 +117,21 @@ export class RegisterPage {
     });
     await loading.present();
 
-    // 3️⃣ Prepare payload for backend
+    // 3️⃣ Prepare payload for backend (Full DTO to avoid 400)
     const payload = {
       firstname: this.formData.firstname,
       lastname: this.formData.lastname,
       email: this.formData.email,
       password: this.formData.password,
-      role: 'USER_OTFLOW'
+      role: 'USER_OTFLOW',
+      civilite: '',
+      telephone: '',
+      adresse: '',
+      ville: '',
+      pays: 'Tunisie',
+      codepostal: 0,
+      type: 'Standard',
+      societeFacturation: ''
     };
 
     // 4️⃣ Call backend

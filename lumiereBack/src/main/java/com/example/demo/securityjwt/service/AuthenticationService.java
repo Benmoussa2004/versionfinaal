@@ -121,7 +121,8 @@ public class AuthenticationService {
         final var user = userRepository.findFirstByEmailOrderByIdAsc(request.email()).orElseThrow();
 
         if (user.getStatus() != com.example.demo.Entity.Status.ACTIVE) {
-            throw new RuntimeException("Account is not active. Current status: " + user.getStatus());
+            logger.warn("Login attempt for non-active account: {} (Status: {})", request.email(), user.getStatus());
+            throw new RuntimeException("Votre compte est en attente de validation ou a été désactivé.");
         }
 
         final var token = JwtService.generateToken(user);

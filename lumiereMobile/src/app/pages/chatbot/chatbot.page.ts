@@ -11,7 +11,7 @@ import {
   IonTextarea
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { notificationsOutline, logOutOutline, arrowBackOutline, trashOutline, send, infiniteOutline } from 'ionicons/icons';
+import { sparkles, notificationsOutline, logOutOutline, arrowBackOutline, trashOutline, send, infiniteOutline } from 'ionicons/icons';
 import { NavController } from '@ionic/angular';
 import { ChatbotService } from '../../services/chatbot.service';
 
@@ -50,7 +50,7 @@ export class ChatbotPage implements OnInit {
     public navCtrl: NavController,
     private chatbotService: ChatbotService
   ) {
-    addIcons({ notificationsOutline, logOutOutline, arrowBackOutline, trashOutline, send, infiniteOutline });
+    addIcons({ sparkles, notificationsOutline, logOutOutline, arrowBackOutline, trashOutline, send, infiniteOutline });
   }
 
   ngOnInit() {
@@ -209,6 +209,10 @@ export class ChatbotPage implements OnInit {
 
   clearChat() {
     this.chatbotService.clearHistory();
+  }
+
+  trackByFn(index: number, item: any) {
+    return item.timestamp;
   }
 }
 
