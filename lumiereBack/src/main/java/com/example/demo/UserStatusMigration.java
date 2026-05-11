@@ -139,5 +139,35 @@ public class UserStatusMigration implements CommandLineRunner {
                     userRepository.save(admin);
                     log.info("✅ Created NEW admin user: {}", adminEmail);
                 });
+
+        // Ensure test client user exists and is ACTIVE
+        String testEmail = "amin@gmail.com";
+        userRepository.findFirstByEmailOrderByIdAsc(testEmail).ifPresentOrElse(
+                user -> {
+                    boolean changed = false;
+                    if (user.getStatus() != Status.ACTIVE) {
+                        user.setStatus(Status.ACTIVE);
+                        changed = true;
+                    }
+                    // Force password reset to amin123 for testing
+                    user.setPasswd(passwordEncoder.encode("amin123"));
+                    changed = true;
+                    
+                    if (changed) {
+                        userRepository.save(user);
+                        log.info("✅ Activated and reset password for existing user {}", testEmail);
+                    }
+                },
+                () -> {
+                    User testUser = new User();
+                    testUser.setFirstname("Amin");
+                    testUser.setLastname("Client");
+                    testUser.setEmail(testEmail);
+                    testUser.setPasswd(passwordEncoder.encode("amin123"));
+                    testUser.setRole(Role.CLIENT);
+                    testUser.setStatus(Status.ACTIVE);
+                    userRepository.save(testUser);
+                    log.info("✅ Created NEW test client user: {}", testEmail);
+                });
     }
 }

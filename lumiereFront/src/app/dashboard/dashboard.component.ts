@@ -46,7 +46,6 @@ export class DashboardComponent implements OnInit {
   today = new Date();
   currentUser: any = null;
   userRole: 'ADMIN' | 'COMMERCIAL' | 'CLIENT' | '' = '';
-  clientCode = '';
 
   // Role helpers (used in template with *ngIf)
   get isAdmin() { return this.userRole === 'ADMIN'; }
@@ -96,7 +95,6 @@ export class DashboardComponent implements OnInit {
     this.authService.profile().subscribe(user => {
       this.currentUser = user;
       this.userRole = user.role?.toUpperCase() ?? '';
-      this.clientCode = user.linkedClientId || '';
       this.loadData();
       
       // Auto-refresh every 30 seconds
@@ -267,9 +265,9 @@ export class DashboardComponent implements OnInit {
     return this.ordersCount > 0 ? `${Math.round((this.enCoursDeLivraisonCount / this.ordersCount) * 100)}%` : '5%';
   }
 
-  /** Returns the client code (username) used to filter the planning calendar for CLIENT role */
+  /** Returns the client code used to filter the planning calendar for CLIENT role */
   get clientCode(): string {
-    return this.currentUser?.username ?? this.currentUser?.email ?? '';
+    return this.currentUser?.linkedClientId || this.currentUser?.username || this.currentUser?.email || '';
   }
 }
 
