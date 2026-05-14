@@ -88,10 +88,15 @@ public class NotificationController {
         return ResponseEntity.notFound().build();
     }
 
-    // ✅ PUT marquer toutes comme lues
-    @PutMapping("/read-all")
-    public ResponseEntity<Void> markAllAsRead() {
-        notificationService.markAllAsRead();
+    // ✅ PUT marquer toutes comme lues (supprime les notifications visibles par l'utilisateur)
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<Void> markAllAsRead(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.demo.Entity.User currentUser) {
+        
+        Integer userId = (currentUser != null) ? currentUser.getId() : null;
+        com.example.demo.Entity.Role role = (currentUser != null) ? currentUser.getRole() : null;
+        
+        notificationService.markAllAsRead(userId, role);
         return ResponseEntity.ok().build();
     }
 

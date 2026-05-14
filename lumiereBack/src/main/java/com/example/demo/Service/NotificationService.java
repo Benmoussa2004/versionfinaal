@@ -102,8 +102,13 @@ public class NotificationService {
         return false;
     }
 
-    public void markAllAsRead() {
-        notificationRepository.deleteAll();
+    public void markAllAsRead(Integer userId, com.example.demo.Entity.Role role) {
+        if (userId == null && role == null) {
+            notificationRepository.deleteAll();
+        } else {
+            List<Notification> toDelete = notificationRepository.findForUser(userId, role);
+            notificationRepository.deleteAll(toDelete);
+        }
     }
 
     public void deleteAllRead() {
