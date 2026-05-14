@@ -2,13 +2,18 @@ package com.example.demo.script;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -79,40 +84,38 @@ public class FileConversionService {
         if (ordresPlanifies == null) {
             return;
         }
-        // Charger tous les ordres depuis le repository
-        List<Ordre> ordres = ordreRepository.findByStatut(Statut.NON_PLANIFIE);
+        // [OPTIMISATION TEMPORELLE] Calculer la date d'il y a 30 jours
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_MONTH, -30);
+        Date thirtyDaysAgo = cal.getTime();
 
-        // Parcourir et comparer les listes
+        // [OPTIMISATION] Charger les ordres NON_PLANIFIE OU créés depuis 30 jours
+        List<Ordre> ordres = ordreRepository.findOrdersToSync(thirtyDaysAgo);
+        if (ordres.isEmpty()) return;
+
+        // [OPTIMISATION] Map pour recherche O(1)
+        Map<String, Map<String, Object>> planifieMap = ordresPlanifies.stream()
+            .filter(obj -> obj instanceof Map)
+            .map(obj -> (Map<String, Object>) obj)
+            .collect(Collectors.toMap(
+                m -> String.valueOf(m.get("OTSNUMBDX")),
+                m -> m,
+                (existing, replacement) -> existing
+            ));
+
         for (Ordre ordre : ordres) {
-            for (Object obj : ordresPlanifies) {
-                if (obj instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> ordrePlanifie = (Map<String, Object>) obj;
-                    String otsNumBdx = (String) ordrePlanifie.get("OTSNUMBDX");
-
-                    if (ordre.getOrderNumber().equals(otsNumBdx)) {
-                        String voycle = ordrePlanifie.get("VOYCLE").toString();
-                        String salnom = ordrePlanifie.get("SALNOM").toString();
-                        String saltel = ordrePlanifie.get("SALTEL").toString();
-                        String camion = ordrePlanifie.get("PLAMOTI").toString();
-                        String datevoy = ordrePlanifie.get("VOYDTD").toString();
-
-                        // Update the order status and other fields
-                        ordre.setStatut(Statut.PLANIFIE);
-                        ordre.setVoycle(voycle);
-                        ordre.setChauffeur(salnom);
-                        ordre.setTelchauffeur(saltel);
-                        ordre.setCamion(camion);
-                        ordre.setDatevoy(datevoy);
-                        break;
-                    }
-                }
+            Map<String, Object> data = planifieMap.get(ordre.getOrderNumber());
+            if (data != null) {
+                ordre.setStatut(Statut.PLANIFIE);
+                ordre.setVoycle(String.valueOf(data.get("VOYCLE")));
+                ordre.setChauffeur(String.valueOf(data.get("SALNOM")));
+                ordre.setTelchauffeur(String.valueOf(data.get("SALTEL")));
+                ordre.setCamion(String.valueOf(data.get("PLAMOTI")));
+                ordre.setDatevoy(String.valueOf(data.get("VOYDTD")));
             }
         }
-        // Enregistrer les ordres mis à jour dans la base de données
-        if (!ordres.isEmpty()) {
-            ordreRepository.saveAll(ordres);
-        }
+        
+        ordreRepository.saveAll(ordres);
     }
 
     public Set<String> updateOrdrevent(String param) {
@@ -159,33 +162,15 @@ public class FileConversionService {
                 o.setEvents(evs);
                 System.out.println(listevents);
 
-                if (o.getEvents().size() == 1) {
-                    o.setStatut(Statut.PLANIFIE);
-
-                }
-
-                if (o.getEvents().size() == 2) {
-                    o.setStatut(Statut.EN_COURS_DE_CHARGEMENT);
-
-                }
-
-                if (o.getEvents().size() == 3) {
-                    o.setStatut(Statut.EN_COURS_DE_CHARGEMENT);
-
-                }
-
-                if (o.getEvents().size() == 4) {
-                    o.setStatut(Statut.CHARGE);
-
-                }
-                if (o.getEvents().size() == 5) {
-                    o.setStatut(Statut.EN_COURS_DE_LIVRAISON);
-
-                }
-
-                if (o.getEvents().size() == 6) {
-                    o.setStatut(Statut.LIVRE);
-
+                // [OPTIMISATION] Mappage propre du statut
+                int eventCount = o.getEvents().size();
+                switch (eventCount) {
+                    case 1: o.setStatut(Statut.PLANIFIE); break;
+                    case 2:
+                    case 3: o.setStatut(Statut.EN_COURS_DE_CHARGEMENT); break;
+                    case 4: o.setStatut(Statut.CHARGE); break;
+                    case 5: o.setStatut(Statut.EN_COURS_DE_LIVRAISON); break;
+                    case 6: o.setStatut(Statut.LIVRE); break;
                 }
 
                 ordreRepository.save(o);
@@ -205,20 +190,19 @@ public class FileConversionService {
 
     @Scheduled(cron = "0 */7 * * * *")
     public void updateAllordresevents() {
+        // [OPTIMISATION] Filtrage DB
+        List<Ordre> listordre = ordreRepository.findByVoycleIsNotNullAndStatutNotIn(
+            Arrays.asList(Statut.NON_CONFIRME, Statut.NON_PLANIFIE, Statut.LIVRE)
+        );
 
-        List<Ordre> listordre = ordreRepository.findAll();
+        if (listordre.isEmpty()) return;
 
-        for (Ordre ord : listordre) {
-            if (ord.getStatut() != Statut.NON_CONFIRME && ord.getStatut() != Statut.NON_PLANIFIE) {
-                if (ord.getVoycle() != null) {
-                    this.updateOrdrevent(ord.getVoycle());
-                } else if (ord.getStatut() != null) {
-                    System.err.println("DEBUG: Skipping event sync for order " + ord.getOrderNumber()
-                            + " because voycle is null (statut: " + ord.getStatut() + ")");
-                }
-            }
-        }
+        // [OPTIMISATION] Parallélisation Python
+        List<CompletableFuture<Void>> futures = listordre.stream()
+            .map(ord -> CompletableFuture.runAsync(() -> this.updateOrdrevent(ord.getVoycle())))
+            .collect(Collectors.toList());
 
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
 }

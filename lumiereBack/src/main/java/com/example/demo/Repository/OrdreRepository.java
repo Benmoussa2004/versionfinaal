@@ -14,6 +14,7 @@ import com.example.demo.Entity.Statut;
 
 public interface OrdreRepository extends JpaRepository<Ordre, Long>, JpaSpecificationExecutor<Ordre> {
 	long countByStatut(Statut statut);
+
 	List<Ordre> findByVoycle(String voycle);
 
 	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.statut = 'NON_PLANIFIE'")
@@ -52,16 +53,25 @@ public interface OrdreRepository extends JpaRepository<Ordre, Long>, JpaSpecific
 			org.springframework.data.domain.Pageable pageable);
 
 	List<Ordre> findByClientOrderByIdDesc(String client);
-	
+
 	Optional<Ordre> findByOrderNumber(String orderNumber);
 
+	List<Ordre> findByVoycleIsNotNullAndStatutNotIn(List<Statut> restrictedStatuts);
+
 	@Query("SELECT o FROM Ordre o WHERE o.client IN :clientCodes OR o.owner = :owner ORDER BY o.id DESC")
-	List<Ordre> findByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner);
+	List<Ordre> findByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes,
+			@Param("owner") com.example.demo.Entity.User owner);
 
 	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.client IN :clientCodes AND o.owner = :owner")
-	long countByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner);
+	long countByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes,
+			@Param("owner") com.example.demo.Entity.User owner);
+
+	List<Ordre> findByDateSaisieAfter(java.util.Date date);
+
+	@Query("SELECT o FROM Ordre o WHERE o.statut = com.example.demo.Entity.Statut.NON_PLANIFIE AND o.dateSaisie > :date")
+	List<Ordre> findOrdersToSync(@Param("date") java.util.Date date);
 
 	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.client IN :clientCodes AND o.owner = :owner AND o.statut = :statut")
-	long countByClientCodesAndOwnerAndStatut(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner, @Param("statut") Statut statut);
+	long countByClientCodesAndOwnerAndStatut(@Param("clientCodes") List<String> clientCodes,
+			@Param("owner") com.example.demo.Entity.User owner, @Param("statut") Statut statut);
 }
-
