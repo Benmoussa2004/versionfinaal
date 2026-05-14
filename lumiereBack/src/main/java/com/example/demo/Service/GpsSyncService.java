@@ -30,9 +30,10 @@ public class GpsSyncService {
 
     /**
      * Synchronize GPS positions every 2 minutes for active orders.
-     * We match by Camion (Plate Number) -> Device Name in Rimtrack.
+     * [FIX] added initialDelay=30000 to avoid deadlock with startup migrations.
      */
-    @Scheduled(fixedRate = 120000)
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Scheduled(fixedRate = 120000, initialDelay = 30000)
     public void syncGpsPositions() {
         log.info("📡 Starting GPS Sync with Rimtrack (IP: 172.18.3.77)...");
         
