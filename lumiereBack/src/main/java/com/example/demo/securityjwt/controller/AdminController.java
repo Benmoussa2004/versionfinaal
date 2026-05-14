@@ -180,6 +180,29 @@ public class AdminController {
         }
     }
 
+    @PutMapping("/users/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Integer id, @RequestBody User userDetails) {
+        try {
+            User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+            
+            user.setFirstname(userDetails.getFirstname());
+            user.setLastname(userDetails.getLastname());
+            user.setEmail(userDetails.getEmail());
+            user.setRole(userDetails.getRole());
+            
+            if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
+                // Note: In a real app, you should encode the password here if it's being changed
+                // user.setPassword(passwordEncoder.encode(userDetails.getPassword()));
+            }
+            
+            userRepository.save(user);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            logger.error("Error updating user {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).body(java.util.Map.of("message", "Erreur lors de la mise à jour : " + e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/users/{id}")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {

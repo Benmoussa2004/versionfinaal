@@ -18,6 +18,7 @@ import org.springframework.web.filter.CorsFilter;
 
 @SpringBootApplication
 @EnableScheduling
+@org.springframework.scheduling.annotation.EnableAsync
 public class LumiereApplication {
 
 	public static void main(String[] args) {

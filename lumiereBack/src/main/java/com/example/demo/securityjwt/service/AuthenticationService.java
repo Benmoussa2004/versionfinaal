@@ -54,8 +54,14 @@ public class AuthenticationService {
         user.setPasswd(passwordEncoder.encode(request.password()));
         user.setRole(request.role());
 
-        // All registrations are set to PENDING by default
-        user.setStatus(com.example.demo.Entity.Status.PENDING);
+        // [OPTIMISATION] Activation directe pour les rôles internes
+        if (user.getRole() == com.example.demo.Entity.Role.CLIENT) {
+            user.setStatus(com.example.demo.Entity.Status.PENDING);
+            logger.info("Pending registration created for client: {}", email);
+        } else {
+            user.setStatus(com.example.demo.Entity.Status.ACTIVE);
+            logger.info("Active account created for internal user ({}): {}", user.getRole(), email);
+        }
         userRepository.save(user);
 
         Client client = new Client();
@@ -77,7 +83,7 @@ public class AuthenticationService {
         
         clientRepository.save(client);
 
-        logger.info("Pending registration created for: {}", email);
+        // logger.info("Pending registration created for: {}", email); (Already logged above)
 
         // Notifications...
         sendNotifications(request);
@@ -86,9 +92,13 @@ public class AuthenticationService {
     }
 
     private void sendNotifications(RegisterRequest request) {
-        // Send registration email
+        // Send appropriate email
         try {
-            emailService.sendRegistrationEmail(request.email(), request.firstname() + " " + request.lastname());
+            if (userRepository.findByEmail(request.email()).map(u -> u.getStatus() == com.example.demo.Entity.Status.ACTIVE).orElse(false)) {
+                emailService.sendAccountActivatedEmail(request.email(), request.firstname() + " " + request.lastname());
+            } else {
+                emailService.sendRegistrationEmail(request.email(), request.firstname() + " " + request.lastname());
+            }
         } catch (Exception e) {
             logger.error("Failed to send email: {}", e.getMessage());
         }

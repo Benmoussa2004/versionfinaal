@@ -25,6 +25,7 @@ export class UsersComponent {
   filteredUsers: any[] = [];
   searchTerm: string = '';
   currentUser: any = { role: '' }; // Track current user's role
+  isEditing: boolean = false;
 
   user = {
     id: 0,
@@ -170,7 +171,29 @@ export class UsersComponent {
   }
 
   editUser(user: any) {
+    this.isEditing = true;
     this.user = { ...user };
+    this.openModal();
+  }
+
+  addNewUser() {
+    this.isEditing = false;
+    this.user = {
+      id: 0,
+      firstname: "",
+      lastname: "",
+      email: "",
+      password: "",
+      role: "CLIENT",
+      civilite: '',
+      telephone: '',
+      adresse: '',
+      ville: '',
+      pays: 'Tunisie',
+      codepostal: 0,
+      type: 'Standard',
+      societeFacturation: ''
+    };
     this.openModal();
   }
 
@@ -189,30 +212,25 @@ export class UsersComponent {
   }
 
   onSubmit(): void {
-    this.authService.register(this.user)
-      .subscribe(response => {
-        this.notificationService.showSuccess('Utilisateur enregistré avec succès');
-        this.user = {
-          id: 0,
-          firstname: '',
-          lastname: '',
-          email: '',
-          password: '',
-          role: 'CLIENT',
-          civilite: '',
-          telephone: '',
-          adresse: '',
-          ville: '',
-          pays: 'Tunisie',
-          codepostal: 0,
-          type: 'Standard',
-          societeFacturation: ''
-        };
-        this.closeModal();
-        this.loadUsers();
-      }, error => {
-        this.notificationService.showError('Erreur lors de l\'enregistrement de l\'utilisateur');
-      });
+    if (this.isEditing) {
+      this.authService.updateUser(this.user.id, this.user)
+        .subscribe(response => {
+          this.notificationService.showSuccess('Utilisateur mis à jour avec succès');
+          this.closeModal();
+          this.loadUsers();
+        }, error => {
+          this.notificationService.showError('Erreur lors de la mise à jour');
+        });
+    } else {
+      this.authService.register(this.user)
+        .subscribe(response => {
+          this.notificationService.showSuccess('Utilisateur enregistré avec succès');
+          this.closeModal();
+          this.loadUsers();
+        }, error => {
+          this.notificationService.showError('Erreur lors de l\'enregistrement');
+        });
+    }
   }
 
   logout(): void {

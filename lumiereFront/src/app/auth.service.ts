@@ -1,4 +1,4 @@
-﻿import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -49,6 +49,10 @@ export class AuthService {
 
   updateUserStatus(id: number, status: string): Observable<any> {
     return this.http.put<any>(`${environment.adminUrl}/users/${id}/status?status=${status}`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  updateUser(id: number, userData: any): Observable<any> {
+    return this.http.put<any>(`${environment.adminUrl}/users/${id}`, userData, { headers: this.getAuthHeaders() });
   }
 
   deleteUser(id: number): Observable<any> {

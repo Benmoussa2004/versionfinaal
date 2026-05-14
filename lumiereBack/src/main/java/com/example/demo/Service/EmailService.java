@@ -11,6 +11,7 @@ import com.example.demo.Entity.Ordre;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.scheduling.annotation.Async;
 import java.text.SimpleDateFormat;
 
 @Service
@@ -19,6 +20,7 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Async
     public void sendEmail(String to, String subject, String text) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -35,6 +37,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendRegistrationEmail(String to, String name) {
         String subject = "Confirmation d'inscription";
         String title = "Confirmation d'inscription";
@@ -51,6 +54,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendAccountActivatedEmail(String to, String name) {
         String subject = "Compte activé";
         String title = "Félicitations ! Votre compte est actif";
@@ -66,6 +70,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendRegistrationAcceptedEmail(String to, String name) {
         String subject = "Inscription acceptée";
         String title = "Bonne nouvelle ! Inscription acceptée";
@@ -81,6 +86,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendAccountRejectedEmail(String to, String name) {
         String subject = "Inscription refusée";
         String title = "Information sur votre demande";
@@ -95,6 +101,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendNewRegistrationNotificationToAdmins(String newUserName, String newUserEmail) {
         String[] adminEmails = { "admin@lumiere.tn", "commercial@lumiere.tn" };
         String subject = "🔔 Nouvelle demande d'inscription";
@@ -115,6 +122,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendOrderCreatedEmail(Ordre ordre) {
         String subject = "🔔 Nouvelle Demande de Livraison - " + ordre.getOrderNumber();
         String title = "Nouvelle Demande de Livraison";
@@ -133,6 +141,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendOrderConfirmedEmail(Ordre ordre, String clientEmail) {
         if (clientEmail == null || clientEmail.isEmpty()) {
             System.err.println("Cannot send order confirmation: client email is missing for order " + ordre.getOrderNumber());

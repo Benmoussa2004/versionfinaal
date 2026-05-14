@@ -19,7 +19,7 @@
       <button type="button" class="btn-export" (click)="exportToExcel()" title="Exporter">
         <i class="fa fa-file-excel"></i> <span>Export</span>
       </button>
-      <button type="button" class="btn-create" (click)="openModal()">
+      <button type="button" class="btn-create" (click)="addNewUser()">
         <i class="fa fa-plus-circle"></i> <span>Cree User</span>
       </button>
     </div>
@@ -134,8 +134,7 @@
       <div class="modal-header-gradient">
         <div class="header-content">
           <i class="fa fa-user-plus"></i>
-          <h5 class="modal-title" id="addUserModalLabel">{{ user.id ? 'Modifier l\'Utilisateur' : 'Ajouter un
-            Utilisateur' }}</h5>
+          <h5 class="modal-title" id="addUserModalLabel">{{ isEditing ? 'Modifier l\'Utilisateur' : 'Ajouter un Utilisateur' }}</h5>
         </div>
         <button type="button" class="btn-close-white" (click)="closeModal()" aria-label="Close">
           <i class="fa fa-times"></i>
