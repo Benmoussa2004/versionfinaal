@@ -16,7 +16,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // Méthode pour trouver des notifications par type
     List<Notification> findByType(@Param("type") String type);
 
-    @org.springframework.data.jpa.repository.Query("SELECT n FROM Notification n WHERE n.targetUserId = :userId OR n.targetRole = :role ORDER BY n.timestamp DESC")
+    @org.springframework.data.jpa.repository.Query("SELECT n FROM Notification n " +
+            "WHERE n.targetUserId = :userId " +
+            "OR n.targetRole = :role " +
+            "OR (n.targetRole = 'ADMIN' AND :role IN (com.example.demo.Entity.Role.COMMERCIAL, com.example.demo.Entity.Role.EMPLOYER_LUMIERE)) " +
+            "ORDER BY n.timestamp DESC")
     List<Notification> findForUser(@Param("userId") Integer userId, @Param("role") com.example.demo.Entity.Role role);
 
 }

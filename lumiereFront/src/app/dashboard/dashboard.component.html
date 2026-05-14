@@ -9,6 +9,7 @@
         <p class="subtitle">
           <ng-container *ngIf="isAdmin">Vue Administrateur — contrôle total</ng-container>
           <ng-container *ngIf="isCommercial">Vue Commercial — gestion opérationnelle</ng-container>
+          <ng-container *ngIf="isEmployer">Vue Employé — suivi logistique</ng-container>
           <ng-container *ngIf="isClient">Bienvenue <strong>{{ currentUser?.firstname }}</strong> — suivi de vos
             commandes</ng-container>
         </p>

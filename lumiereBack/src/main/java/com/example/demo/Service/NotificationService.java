@@ -23,7 +23,7 @@ public class NotificationService {
     private com.example.demo.Repository.UserRepository userRepository;
 
     public List<Notification> getAllNotifications(Integer userId, com.example.demo.Entity.Role role) {
-        if (userId != null && role != null) {
+        if (userId != null || role != null) {
             return notificationRepository.findForUser(userId, role);
         }
         return java.util.Collections.emptyList();

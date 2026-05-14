@@ -30,12 +30,15 @@ public class NotificationController {
     // ✅ GET toutes les notifications (filtrées par userId et role)
     @GetMapping
     public List<Notification> getAllNotifications(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.example.demo.Entity.User currentUser,
             @RequestParam(required = false) Integer userId,
-            @RequestParam(required = false) String role,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        com.example.demo.Entity.Role roleEnum = parseRole(role);
-        return notificationService.getAllNotifications(userId, roleEnum);
+            @RequestParam(required = false) String role) {
+        
+        // If parameters are missing, use current user info
+        Integer effectiveUserId = (userId != null) ? userId : (currentUser != null ? currentUser.getId() : null);
+        com.example.demo.Entity.Role roleEnum = (role != null) ? parseRole(role) : (currentUser != null ? currentUser.getRole() : null);
+
+        return notificationService.getAllNotifications(effectiveUserId, roleEnum);
     }
 
     // ✅ GET une notification par ID

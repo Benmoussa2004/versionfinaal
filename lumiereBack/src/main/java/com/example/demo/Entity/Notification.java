@@ -31,6 +31,7 @@ public class Notification {
   
     private String message;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("isRead")
     private boolean isRead = false;
 
     @Enumerated(EnumType.STRING)

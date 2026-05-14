@@ -101,6 +101,8 @@ public class OrdreService {
 			notification.setType("ORDRE");
 			notification.setMessage("Nouvel ordre créé : " + savedOrdre.getOrderNumber() + " pour " + savedOrdre.getNomclient());
 			notification.setRead(false);
+			// [FIX] Target ADMIN by default, so it shows up for staff
+			notification.setTargetRole(com.example.demo.Entity.Role.ADMIN);
 			notificationService.createNotification(notification);
 		} catch (Exception e) {
 			System.err.println("Failed to send order creation notifications: " + e.getMessage());

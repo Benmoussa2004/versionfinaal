@@ -45,13 +45,14 @@ export class DashboardComponent implements OnInit {
   // ── Current user ─────────────────────────────────────────────────────────
   today = new Date();
   currentUser: any = null;
-  userRole: 'ADMIN' | 'COMMERCIAL' | 'CLIENT' | '' = '';
+  userRole: 'ADMIN' | 'COMMERCIAL' | 'CLIENT' | 'EMPLOYER_LUMIERE' | '' = '';
 
   // Role helpers (used in template with *ngIf)
   get isAdmin() { return this.userRole === 'ADMIN'; }
   get isCommercial() { return this.userRole === 'COMMERCIAL'; }
   get isClient() { return this.userRole === 'CLIENT'; }
-  get isStaff() { return this.isAdmin || this.isCommercial; }
+  get isEmployer() { return this.userRole === 'EMPLOYER_LUMIERE'; }
+  get isStaff() { return this.isAdmin || this.isCommercial || this.isEmployer; }
 
   // ── KPI — shared ─────────────────────────────────────────────────────────
   ordersCount = 0;
