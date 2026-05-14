@@ -33,6 +33,7 @@
     "leaflet": "^1.9.4",
     "ng-apexcharts": "^1.17.1",
     "rxjs": "7.8.1",
+    "sweetalert2": "^11.26.24",
     "tslib": "2.6.2",
     "zone.js": "0.14.3"
   },

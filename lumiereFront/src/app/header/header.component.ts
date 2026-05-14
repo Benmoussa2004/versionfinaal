@@ -1,7 +1,7 @@
 import { Component, EventEmitter, OnInit, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { NotificationService } from '../notification.service';
+import { NotificationService, SystemNotification } from '../notification.service';
 
 @Component({
   selector: 'app-header',
@@ -18,7 +18,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   userRole: string = '';
   userAvatar: string = '';
   showNotifications: boolean = false;
-  notifications: any[] = [];
+  notifications: SystemNotification[] = [];
   private pollingInterval: any;
 
   constructor(private notifService: NotificationService) {
@@ -55,8 +55,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   fetchNotifications(): void {
     this.notifService.afficher().subscribe({
-      next: (data) => {
-        this.notifications = (data || []).sort((a: any, b: any) =>
+      next: (data: SystemNotification[]) => {
+        this.notifications = (data || []).sort((a: SystemNotification, b: SystemNotification) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
       },

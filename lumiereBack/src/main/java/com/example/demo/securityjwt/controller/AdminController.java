@@ -26,15 +26,18 @@ public class AdminController {
     private final com.example.demo.Repository.ClientRepository clientRepository;
     private final EmailService emailService;
     private final NotificationRepository notificationRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public AdminController(UserRepository userRepository,
             com.example.demo.Repository.ClientRepository clientRepository,
             EmailService emailService,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.clientRepository = clientRepository;
         this.emailService = emailService;
         this.notificationRepository = notificationRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @GetMapping("/users")
@@ -77,30 +80,30 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/status")
-    public ResponseEntity<User> updateUserStatus(@PathVariable Integer id, @RequestParam Status status) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Custom logic for CLIENT role: "Accepting" registration doesn't activate the
-        // user yet
-        if (user.getRole() == com.example.demo.Entity.Role.CLIENT && status == Status.ACTIVE) {
-            List<Client> clients = userRepository.findClientsByUserId(id);
-            if (clients != null && !clients.isEmpty()) {
-                Client client = clients.get(0);
-                client.setRegistrationApproved(true);
-                clientRepository.save(client); // FIX: Save the client!
-                // We keep User status as PENDING until profile is completed
-                user.setStatus(Status.PENDING);
-            }
-        } else {
-            user.setStatus(status);
-        }
-
-        userRepository.save(user);
-
-        String fullName = user.getFirstname() + " " + user.getLastname();
-
-        // Send email notification (non-blocking)
+    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id, @RequestParam Status status) {
         try {
+            User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + id));
+
+            // Custom logic for CLIENT role: "Accepting" registration doesn't activate the user yet
+            if (user.getRole() == com.example.demo.Entity.Role.CLIENT && status == Status.ACTIVE) {
+                List<Client> clients = userRepository.findClientsByUserId(id);
+                if (clients != null && !clients.isEmpty()) {
+                    Client client = clients.get(0);
+                    client.setRegistrationApproved(true);
+                    clientRepository.save(client);
+                    user.setStatus(Status.PENDING);
+                } else {
+                    return ResponseEntity.status(404).body(java.util.Map.of("message", "Impossible d'activer : Enregistrement client manquant pour cet utilisateur."));
+                }
+            } else {
+                user.setStatus(status);
+            }
+
+            userRepository.save(user);
+
+            String fullName = user.getFirstname() + " " + user.getLastname();
+
+            // Send email notification (non-blocking)
             if (status == Status.ACTIVE) {
                 // If it's a client, the email should say "Registration Accepted" instead of
                 // "Activated"
@@ -122,10 +125,10 @@ public class AdminController {
                 emailService.sendAccountRejectedEmail(user.getEmail(), fullName);
             }
         } catch (Exception e) {
-            logger.error("Failed to send status update email to {}: {}", user.getEmail(), e.getMessage());
+            logger.error("Error updating user status for {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).body(java.util.Map.of("message", "Erreur serveur lors de la mise à jour : " + e.getMessage()));
         }
-
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok("Statut mis à jour avec succès");
     }
 
     @GetMapping("/status")
@@ -137,50 +140,82 @@ public class AdminController {
     }
 
     @PostMapping("/users/{id}/approve-client")
-    public ResponseEntity<User> approveClient(
+    public ResponseEntity<?> approveClient(
             @PathVariable Integer id,
             @RequestParam String codeClient,
             @RequestParam String idEdi) {
-        logger.info("Approving client user ID: {} with code: {} and edi: {}", id, codeClient, idEdi);
-        
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
-        // Find associated client
-        List<Client> clients = userRepository.findClientsByUserId(id);
-        if (clients == null || clients.isEmpty()) {
-            throw new RuntimeException("No client record found for this user");
-        }
-        
-        Client client = clients.get(0);
-        client.setCodeclient(codeClient);
-        client.setIdEdi(idEdi);
-        client.setRegistrationApproved(true);
-        client.setProfileCompleted(true);
-        clientRepository.save(client);
-        
-        // Activate user
-        user.setStatus(Status.ACTIVE);
-        userRepository.save(user);
-        
-        String fullName = user.getFirstname() + " " + user.getLastname();
         try {
-            emailService.sendRegistrationAcceptedEmail(user.getEmail(), fullName);
-        } catch (Exception e) {
-            logger.error("Failed to send approval email: {}", e.getMessage());
-        }
+            logger.info("Approving client user ID: {} with code: {} and edi: {}", id, codeClient, idEdi);
+            
+            User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Utilisateur non trouvé (ID: " + id + ")"));
+            
+            // Find associated client
+            List<Client> clients = userRepository.findClientsByUserId(id);
+            if (clients == null || clients.isEmpty()) {
+                return ResponseEntity.status(404).body(java.util.Map.of("message", "Erreur critique : Aucun enregistrement client n'est lié à cet utilisateur dans la table 'user_clients'."));
+            }
+            
+            Client client = clients.get(0);
+            client.setCodeclient(codeClient);
+            client.setIdEdi(idEdi);
+            client.setRegistrationApproved(true);
+            client.setProfileCompleted(true);
+            clientRepository.save(client);
+            
+            // Activate user
+            user.setStatus(Status.ACTIVE);
+            userRepository.save(user);
         
-        return ResponseEntity.ok(user);
+            String fullName = user.getFirstname() + " " + user.getLastname();
+            try {
+                emailService.sendRegistrationAcceptedEmail(user.getEmail(), fullName);
+            } catch (Exception e) {
+                logger.error("Failed to send approval email: {}", e.getMessage());
+            }
+            
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            logger.error("Error in approveClient for {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).body(java.util.Map.of("message", "Échec de l'activation : " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/users/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
-        logger.info("deleteUser called for ID: {}", id);
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
-            logger.info("User deleted successfully");
-            return ResponseEntity.noContent().build();
+        logger.info("Suppression de l'utilisateur ID: {}", id);
+        try {
+            // 1. Nettoyer les ordres (nullifier owner_id)
+            jdbcTemplate.update("UPDATE ordre SET owner_id = NULL WHERE owner_id = ?", id);
+            
+            // 2. Nettoyer les clients (nullifier owner_id s'il existe encore)
+            try {
+                jdbcTemplate.update("UPDATE client SET owner_id = NULL WHERE owner_id = ?", id);
+            } catch (Exception e) {
+                logger.debug("La colonne owner_id dans client n'existe plus ou est déjà vide.");
+            }
+            
+            // 3. Nettoyer les notifications (nullifier target_user_id)
+            jdbcTemplate.update("UPDATE notifications SET target_user_id = NULL WHERE target_user_id = ?", id);
+            
+            // 4. Supprimer les permissions spécifiques
+            jdbcTemplate.update("DELETE FROM user_permissions WHERE user_id = ?", id);
+            
+            // 5. Supprimer les liens avec les clients (table de jointure)
+            jdbcTemplate.update("DELETE FROM user_clients WHERE user_id = ?", id);
+            
+            // 6. Supprimer l'utilisateur lui-même
+            int deleted = jdbcTemplate.update("DELETE FROM _user WHERE id = ?", id);
+            
+            if (deleted > 0) {
+                logger.info("Utilisateur ID: {} supprimé avec succès", id);
+                return ResponseEntity.noContent().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            logger.error("Erreur critique lors de la suppression de l'utilisateur {}: {}", id, e.getMessage());
+            return ResponseEntity.status(500).build();
         }
-        logger.warn("User with ID: {} not found for deletion", id);
-        return ResponseEntity.notFound().build();
     }
 }

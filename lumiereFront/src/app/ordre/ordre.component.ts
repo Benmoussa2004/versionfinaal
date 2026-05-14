@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { OrdreService } from '../ordre.service';
+import { NotificationService } from '../notification.service';
 import { Observable } from 'rxjs';
 import * as L from 'leaflet';
 
@@ -77,7 +78,8 @@ export class OrdreComponent implements OnInit {
     private modalService: NgbModal, 
     private service: OrdreService, 
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -105,7 +107,6 @@ export class OrdreComponent implements OnInit {
   }
 
   openModal() {
-    console.log('open')
     this.isModalOpen = true;
   }
 
@@ -116,10 +117,10 @@ export class OrdreComponent implements OnInit {
   onSubmit() {
     this.service.sendEmail(this.email).subscribe(
       response => {
-        console.log('Email envoyé avec succès', response);
+        this.notificationService.showSuccess('Email envoyé avec succès');
       },
       error => {
-        console.error('Error sending email', error);
+        this.notificationService.showError('Erreur lors de l\'envoi de l\'email');
       }
     );
     this.closeModal();
@@ -132,7 +133,7 @@ export class OrdreComponent implements OnInit {
         this.email.to = response;
       },
       error => {
-        console.error('Error fetching email:', error);
+        this.notificationService.showError('Erreur lors de la récupération de l\'email');
       }
     );
   }
@@ -149,10 +150,10 @@ export class OrdreComponent implements OnInit {
 
         this.service.sendSms(this.sms.mobile, this.sms.message).subscribe(
           response => {
-            console.log('SMS envoyé avec succès', response);
+            this.notificationService.showSuccess('SMS envoyé avec succès');
           },
           error => {
-            console.error("Erreur lors de l'envoi du SMS", error);
+            this.notificationService.showError("Erreur lors de l'envoi du SMS");
           }
         );
       },

@@ -18,7 +18,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     Optional<User> findFirstByEmailOrderByIdAsc(@Param("email") String email);
 
-    @org.springframework.data.jpa.repository.Query("SELECT c FROM Client c WHERE c.owner.id = :userId")
+    boolean existsByEmail(String email);
+
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Client c JOIN c.owners o WHERE o.id = :userId")
     List<com.example.demo.Entity.Client> findClientsByUserId(@Param("userId") Integer userId);
 
 }

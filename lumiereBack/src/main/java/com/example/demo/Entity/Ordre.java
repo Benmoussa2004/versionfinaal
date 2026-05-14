@@ -22,6 +22,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import jakarta.persistence.Transient;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -111,6 +113,10 @@ public class Ordre {
 	@ToString.Exclude
 	@EqualsAndHashCode.Exclude
 	private Tranck trancking;
+
+	@ManyToOne
+	@JoinColumn(name = "owner_id")
+	private User owner;
 
 	@PrePersist
 	protected void onCreate() {
@@ -427,6 +433,14 @@ public class Ordre {
 
 	public void setSpeed(Double speed) {
 		this.speed = speed;
+	}
+
+	public User getOwner() {
+		return owner;
+	}
+
+	public void setOwner(User owner) {
+		this.owner = owner;
 	}
 
 }

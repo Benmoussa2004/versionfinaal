@@ -51,6 +51,7 @@ public class SecurityConfiguration {
                 "Accept",
                 "Origin",
                 "X-Requested-With",
+                "X-App-Platform",
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("Authorization"));

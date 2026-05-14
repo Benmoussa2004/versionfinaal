@@ -32,8 +32,10 @@ public record AuthController(AuthenticationService authenticationService, UserRe
     }
 
     @PostMapping("/authenticate")
-    public ResponseEntity<AuthenticationResponse> login(@RequestBody AuthenticationRequest request) {
-        return ResponseEntity.ok(authenticationService.authenticate(request));
+    public ResponseEntity<AuthenticationResponse> login(
+            @RequestBody AuthenticationRequest request,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-App-Platform", required = false) String appPlatform) {
+        return ResponseEntity.ok(authenticationService.authenticate(request, appPlatform));
     }
 
     @PutMapping("/update")

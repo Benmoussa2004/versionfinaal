@@ -308,9 +308,7 @@
 .role-tag[data-role="ADMIN"] { background: #fee2e2; color: #ef4444; }
 .role-tag[data-role="COMMERCIAL"] { background: #fef3c7; color: #d97706; }
 .role-tag[data-role="CLIENT"] { background: #dcfce7; color: #16a34a; }
-.role-tag[data-role="USER_LUMIERE"] { background: #e0f2fe; color: #0284c7; }
-.role-tag[data-role="USER_OTFLOW"] { background: #f5f3ff; color: #8b5cf6; }
-.role-tag[data-role="USER"] { background: #f1f5f9; color: #64748b; }
+.role-tag[data-role="EMPLOYER_LUMIERE"] { background: #e0f2fe; color: #0284c7; }
 
 /* ── Action Orbit Buttons ── */
 .action-orbit {

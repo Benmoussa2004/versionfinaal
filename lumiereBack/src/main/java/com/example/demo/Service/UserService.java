@@ -28,6 +28,11 @@ public class UserService {
     }
 
     public User saveUser(User user) {
+        // [NEW] Duplicate email check for new users
+        if (user.getId() == null && user.getEmail() != null && userRepository.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Un utilisateur avec cet email existe déjà.");
+        }
+
         // Only encode if it's not null and doesn't look like an already encoded bcrypt string
         if (user.getPasswd() != null && !user.getPasswd().startsWith("$2a$")) {
             user.setPasswd(passwordEncoder.encode(user.getPasswd()));

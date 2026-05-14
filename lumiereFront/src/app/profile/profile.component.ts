@@ -58,10 +58,8 @@ export class ProfileComponent implements OnInit {
         this.imagePreview = data.profileImageBase64 || null;
         this.isLoading = false;
         this.cdr.detectChanges();
-        console.log('Profile loaded, user id:', this.user.id);
       },
       error: (err) => {
-        console.error('Erreur chargement profil:', err);
         this.isLoading = false;
       }
     });

@@ -7,6 +7,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.ManyToMany;
+import java.util.List;
+import java.util.ArrayList;
 import lombok.Data;
 import lombok.ToString;
 import lombok.EqualsAndHashCode;
@@ -23,13 +26,12 @@ public class Client {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long code;
 
-	// Owner relationship - each client belongs to a user
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "owner_id")
+	// Owners relationship - multiple users can own/be linked to a client
+	@ManyToMany(mappedBy = "ownedClients", fetch = FetchType.LAZY)
 	@com.fasterxml.jackson.annotation.JsonIgnore
 	@ToString.Exclude
 	@EqualsAndHashCode.Exclude
-	private User owner;
+	private List<User> owners = new ArrayList<>();
 
 	private String codeclient;
 	private String civilite;
@@ -66,7 +68,7 @@ public class Client {
 	@jakarta.persistence.Transient
 	@com.fasterxml.jackson.annotation.JsonProperty("ownerId")
 	public Integer getOwnerId() {
-		return owner != null ? owner.getId() : null;
+		return (owners != null && !owners.isEmpty()) ? owners.get(0).getId() : null;
 	}
 
 	public Long getCode() {
@@ -261,12 +263,12 @@ public class Client {
 		this.email = email;
 	}
 
-	public User getOwner() {
-		return owner;
+	public List<User> getOwners() {
+		return owners;
 	}
 
-	public void setOwner(User owner) {
-		this.owner = owner;
+	public void setOwners(List<User> owners) {
+		this.owners = owners;
 	}
 
 	public boolean isRegistrationApproved() {

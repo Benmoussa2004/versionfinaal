@@ -1,4 +1,4 @@
-﻿import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -66,10 +66,8 @@ export class OrdreService {
 
   private smsUrl = 'http://172.18.3.65:28500/SMS_SEND';
   sendSms(mobile: string, message: string): Observable<any> {
-    console.log(mobile)
-    const url = `${this.smsUrl}?tel=${encodeURIComponent(mobile)}&msg=${encodeURIComponent(message)}`;
-    console.log(url)
-    return this.http.get(url);
+    const url = `${this.apiUrl}/sms/send?mobile=${mobile}&message=${encodeURIComponent(message)}`;
+    return this.http.post(url, {});
   }
 
 

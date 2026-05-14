@@ -63,7 +63,7 @@ export class ExportService {
                 tl: { col: midCol, row: 0.15 },
                 ext: { width: 130, height: 70 }
             });
-        } catch (e) { console.error('Logo load failed', e); }
+        } catch (e) { }
 
         // ── Row 4: Dark separator under the logo block (full width) ────────────
         worksheet.mergeCells(`A4:${lastCol}4`);

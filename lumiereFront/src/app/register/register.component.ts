@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { NotificationService } from '../notification.service';
 
 @Component({
     selector: 'app-register',
@@ -35,18 +36,17 @@ export class RegisterComponent {
     error: string = '';
     success: boolean = false;
 
-    constructor(private authService: AuthService, private router: Router) { }
+    constructor(private authService: AuthService, private router: Router, private notificationService: NotificationService) { }
 
     onSubmit(): void {
         this.authService.register(this.user)
             .subscribe(
                 response => {
+                    this.notificationService.showSuccess('Inscription réussie ! Votre compte est en attente d\'approbation.');
                     this.success = true;
-                    this.error = '';
-                    // Do NOT redirect immediately. Show the success message which should explain the pending status.
                 },
                 error => {
-                    console.error('Registration failed', error);
+                    this.notificationService.showError('Échec de l\'inscription');
                     if (error.error && error.error.message) {
                         this.error = error.error.message;
                     } else {

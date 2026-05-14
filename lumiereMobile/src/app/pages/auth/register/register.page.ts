@@ -123,7 +123,7 @@ export class RegisterPage {
       lastname: this.formData.lastname,
       email: this.formData.email,
       password: this.formData.password,
-      role: 'USER_OTFLOW',
+      role: 'CLIENT',
       civilite: '',
       telephone: '',
       adresse: '',

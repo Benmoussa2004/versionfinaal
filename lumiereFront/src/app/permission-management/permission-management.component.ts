@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PermissionService } from '../permission.service';
 import { UsersService } from '../users.service';
+import { NotificationService } from '../notification.service';
 
 interface Action {
     key: string;
@@ -24,7 +25,7 @@ interface Module {
     styleUrls: ['./permission-management.component.css']
 })
 export class PermissionManagementComponent implements OnInit {
-    roles = ['ADMIN', 'COMMERCIAL', 'CLIENT', 'USER_LUMIERE'];
+    roles = ['ADMIN', 'COMMERCIAL', 'CLIENT', 'EMPLOYER_LUMIERE'];
     users: any[] = [];
     configMode: 'ROLE' | 'USER' = 'ROLE';
     selectedRole: string = 'ADMIN';
@@ -111,7 +112,8 @@ export class PermissionManagementComponent implements OnInit {
     constructor(
         private permissionService: PermissionService,
         private userService: UsersService,
-        private cdr: ChangeDetectorRef
+        private cdr: ChangeDetectorRef,
+        private notificationService: NotificationService
     ) { }
 
     ngOnInit(): void {
@@ -230,12 +232,11 @@ export class PermissionManagementComponent implements OnInit {
 
         saveObs.subscribe({
             next: () => {
-                alert('Configuration sauvegardée avec succès !');
+                this.notificationService.showSuccess('Configuration sauvegardée avec succès !');
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Failed to save permissions', err);
-                alert('Erreur lors de la sauvegarde');
+                this.notificationService.showError('Erreur lors de la sauvegarde');
                 this.isLoading = false;
             }
         });

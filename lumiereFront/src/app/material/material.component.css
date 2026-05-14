@@ -48,7 +48,8 @@
 }
 
 .logo {
-  height: 200px; 
+  height: 50px; 
+  width: auto;
   object-fit: contain;
   transition: transform 0.3s;
 }
@@ -387,7 +388,8 @@
 }
 
 .logo {
-  height: 80px; /* Increased size significantly */
+  height: 60px;
+  width: auto;
   object-fit: contain;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));

@@ -58,9 +58,16 @@ public class ClientDashboardController {
 
         Map<String, Long> stats = new HashMap<>();
         // Maps based on HomePage stats expectations
-        stats.put("mesDemandesEnCours",
-                ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.EN_COURS_DE_LIVRAISON));
-        stats.put("mesDemandesEnAttente", ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.PLANIFIE));
+        // Improved stats mapping
+        long enAttente = ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.NON_PLANIFIE) + 
+                         ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.PLANIFIE);
+        
+        long enCours = ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.EN_COURS_DE_CHARGEMENT) +
+                       ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.CHARGE) +
+                       ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.EN_COURS_DE_LIVRAISON);
+
+        stats.put("mesDemandesEnCours", enCours);
+        stats.put("mesDemandesEnAttente", enAttente);
         stats.put("mesDemandesTerminees", ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.LIVRE));
         stats.put("mesLivraisonsEnCours",
                 ordreRepository.countByClientCodesAndStatut(clientCodes, Statut.EN_COURS_DE_LIVRAISON));
@@ -88,16 +95,12 @@ public class ClientDashboardController {
     }
 
     private List<String> getClientCodesForUser(User user) {
-        if (user.isStaff()) {
-            return clientRepository.findAll().stream()
-                    .map(Client::getCodeclient)
-                    .filter(code -> code != null && !code.isEmpty())
-                    .collect(Collectors.toList());
-        } else {
-            return clientRepository.findByOwner(user).stream()
-                    .map(Client::getCodeclient)
-                    .filter(code -> code != null && !code.isEmpty())
-                    .collect(Collectors.toList());
-        }
+        // [FIX] Use the ManyToMany relationship directly from the user object or via repository
+        // Reloading user to ensure the collection is accessible if needed, 
+        // but findByOwner in repository is cleaner.
+        return clientRepository.findByOwner(user).stream()
+                .map(Client::getCodeclient)
+                .filter(code -> code != null && !code.isEmpty())
+                .collect(Collectors.toList());
     }
 }

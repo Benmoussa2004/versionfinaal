@@ -79,21 +79,34 @@ public class GpsSyncService {
         
         try {
             // Step 1: Mapping Camion -> id_device
-            String mappingQuery = 
-                "SELECT d.id_device " +
-                "FROM vehicule v " +
-                "JOIN device d ON v.vehicule_id = d.vehicule_id " +
-                "WHERE LOWER(v.matricule) LIKE LOWER(?) OR LOWER(v.alias) LIKE LOWER(?) LIMIT 1";
+            Long idDevice = null;
             
-            List<Long> deviceIds = rimtrackJdbcTemplate.queryForList(mappingQuery, Long.class, "%" + camion + "%", "%" + camion + "%");
-            
-            if (deviceIds.isEmpty()) {
-                log.warn("❓ No device mapping found for truck [{}] in Rimtrack mapping table.", camion);
-                return;
+            // [TEST FEATURE] If truck starts with SIM-, use the number as device ID directly
+            if (camion.toUpperCase().startsWith("SIM-")) {
+                try {
+                    idDevice = Long.parseLong(camion.substring(4).trim());
+                    log.info("🧪 TEST MODE: Forcing Device ID [{}] for truck [{}]", idDevice, camion);
+                } catch (Exception e) {
+                    log.warn("🧪 TEST MODE ERROR: Invalid device ID format in SIM- truck name: {}", camion);
+                }
             }
             
-            Long idDevice = deviceIds.get(0);
-            log.info("📍 Found Device ID [{}] for truck [{}]", idDevice, camion);
+            if (idDevice == null) {
+                String mappingQuery = 
+                    "SELECT d.id_device " +
+                    "FROM vehicule v " +
+                    "JOIN device d ON v.vehicule_id = d.vehicule_id " +
+                    "WHERE LOWER(v.matricule) LIKE LOWER(?) OR LOWER(v.alias) LIKE LOWER(?) LIMIT 1";
+                
+                List<Long> deviceIds = rimtrackJdbcTemplate.queryForList(mappingQuery, Long.class, "%" + camion + "%", "%" + camion + "%");
+                
+                if (deviceIds.isEmpty()) {
+                    log.warn("❓ No device mapping found for truck [{}] in Rimtrack mapping table.", camion);
+                    return;
+                }
+                idDevice = deviceIds.get(0);
+                log.info("📍 Found Device ID [{}] for truck [{}]", idDevice, camion);
+            }
             
             // Step 2: Récupérer la dernière position
             String dynamicTable = "rimtrack_archive.arch_" + idDevice;

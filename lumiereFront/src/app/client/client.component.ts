@@ -106,21 +106,21 @@ export class ClientComponent implements OnInit, OnDestroy {
 
   ajouter() {
     this.service.ajouter(this.client).subscribe((res) => {
-      this.ser.notification.type = "Client";
-      this.ser.notification.message = "Création d'un nouveau client :" + this.client.code + " " + this.client.nom + " par :" + this.user.firstname + " " + this.user.lastname;
-      this.ser.ajouternotification(this.ser.notification);
+      this.ser.showSuccess(`Création du client : ${this.client.nom}`);
     });
   }
 
-  supprimer(id: number) {
-    this.service.supprimer(id).subscribe(
-      (res) => {
-        this.ser.notification.type = "Client";
-        this.ser.notification.message = "Suppression du client d'ID:" + id;
-        this.ser.ajouternotification(this.ser.notification);
-        this.afficher();
-      }
-    );
+  async supprimer(id: number) {
+    const confirmed = await this.ser.confirm('Suppression', 'Voulez-vous vraiment supprimer ce client ?', 'Supprimer');
+    if (confirmed) {
+      this.service.supprimer(id).subscribe(
+        (res) => {
+          this.ser.showSuccess("Client supprimé avec succès");
+          this.afficher();
+        },
+        err => this.ser.showError("Erreur lors de la suppression")
+      );
+    }
   }
 
   creer() {
@@ -196,13 +196,11 @@ export class ClientComponent implements OnInit, OnDestroy {
       }
       this.service.modifier(this.client.code, this.client).subscribe(
         res => {
-          this.ser.notification.type = "Client";
-          this.ser.notification.message = "Mise à jour du client : " + this.client.nom;
-          this.ser.ajouternotification(this.ser.notification);
+          this.ser.showSuccess("Client mis à jour : " + this.client.nom);
           this.afficher();
           this.modalService.dismissAll();
         },
-        err => console.error('Erreur lors de la mise à jour', err)
+        err => this.ser.showError('Erreur lors de la mise à jour')
       );
     } else {
       this.ajouter();

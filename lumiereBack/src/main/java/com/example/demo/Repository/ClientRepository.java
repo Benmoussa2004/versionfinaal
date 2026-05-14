@@ -13,10 +13,14 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
 	Optional<Client> findByCodeclient(String codeclient);
 
+	Optional<Client> findByEmail(String email);
+
 	// Multi-tenancy: find clients by owner
+	@org.springframework.data.jpa.repository.Query("SELECT c FROM Client c JOIN c.owners o WHERE o = :owner")
 	List<Client> findByOwner(@Param("owner") User owner);
 
 	// Find specific client by owner and code
+	@org.springframework.data.jpa.repository.Query("SELECT c FROM Client c JOIN c.owners o WHERE o = :owner AND c.codeclient = :codeclient")
 	Optional<Client> findByOwnerAndCodeclient(@Param("owner") User owner, @Param("codeclient") String codeclient);
 
 }

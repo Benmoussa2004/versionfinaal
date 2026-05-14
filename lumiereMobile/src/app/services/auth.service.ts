@@ -1,4 +1,4 @@
-﻿
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
@@ -21,7 +21,9 @@ export class AuthService {
   // 🔐 LOGIN
   login(data: LoginRequest): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/authenticate`, data)
+      .post<AuthResponse>(`${this.apiUrl}/authenticate`, data, {
+        headers: new HttpHeaders({ 'X-App-Platform': 'mobile' })
+      })
       .pipe(
         tap(res => {
           localStorage.setItem('token', res.token);

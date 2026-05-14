@@ -2,6 +2,9 @@ package com.example.demo.Entity;
 
 import jakarta.persistence.*;
 import jakarta.persistence.Transient;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -67,8 +70,13 @@ public class User implements UserDetails {
         this.linkedClientId = linkedClientId;
     }
 
-    // Owned clients relationship - one user can own multiple clients
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // Shared clients relationship - multiple users can own/be linked to multiple clients
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_clients",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "client_id")
+    )
     @JsonIgnore
     private List<Client> ownedClients = new ArrayList<>();
 
@@ -150,7 +158,7 @@ public class User implements UserDetails {
 
     @JsonIgnore
     public boolean isAdmin() {
-        return role == Role.ADMIN || role == Role.SUPERADMIN;
+        return role == Role.ADMIN;
     }
 
     @JsonIgnore
@@ -159,13 +167,13 @@ public class User implements UserDetails {
     }
 
     @JsonIgnore
-    public boolean isUserLumiere() {
-        return role == Role.USER_LUMIERE;
+    public boolean isEmployerLumiere() {
+        return role == Role.EMPLOYER_LUMIERE;
     }
 
     @JsonIgnore
     public boolean isStaff() {
-        return isAdmin() || isCommercial() || isUserLumiere();
+        return isAdmin() || isCommercial() || isEmployerLumiere();
     }
 
     @Override
@@ -214,4 +222,16 @@ public class User implements UserDetails {
         return true;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return id != null && id.equals(user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31; // Constant hash code for entities with generated IDs (Hibernate recommendation)
+    }
 }

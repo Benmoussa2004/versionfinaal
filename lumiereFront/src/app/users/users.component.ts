@@ -6,6 +6,7 @@ import { AuthService } from '../auth.service';
 import { UsersService } from '../users.service';
 import { Router } from '@angular/router';
 import { ExportService } from '../export.service';
+import { NotificationService } from '../notification.service';
 
 @Component({
   selector: 'app-users',
@@ -53,7 +54,8 @@ export class UsersComponent {
     private authService: AuthService,
     private router: Router,
     private exportService: ExportService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -82,7 +84,7 @@ export class UsersComponent {
         this.cdr.detectChanges();
       },
       error => {
-        console.error('Failed to fetch users', error);
+        this.notificationService.showError('Échec de la récupération des utilisateurs');
       }
     );
   }
@@ -90,9 +92,10 @@ export class UsersComponent {
   approve(id: number) {
     this.authService.updateUserStatus(id, 'ACTIVE').subscribe(
       res => {
+        this.notificationService.showSuccess('Utilisateur approuvé avec succès');
         this.loadUsers();
       },
-      err => console.error('Error approving user', err)
+      err => this.notificationService.showError('Erreur lors de l\'approbation')
     );
   }
 
@@ -118,12 +121,12 @@ export class UsersComponent {
       this.approvalData.idEdi
     ).subscribe(
       res => {
+        this.notificationService.showSuccess('Client lié et approuvé !');
         this.closeApprovalModal();
         this.loadUsers();
       },
       err => {
-        console.error('Approval failed', err);
-        alert('Erreur lors de l\'approbation. Vérifiez que le client est bien lié.');
+        this.notificationService.showError('Erreur lors de l\'approbation. Vérifiez que le client est bien lié.');
       }
     );
   }
@@ -131,28 +134,37 @@ export class UsersComponent {
   reject(id: number) {
     this.authService.updateUserStatus(id, 'REJECTED').subscribe(
       res => {
+        this.notificationService.showSuccess('Utilisateur rejeté');
         this.loadUsers();
       },
-      err => console.error('Error rejecting user', err)
+      err => this.notificationService.showError('Erreur lors du rejet')
     );
   }
 
   blockUser(id: number) {
     this.authService.updateUserStatus(id, 'REJECTED').subscribe(
       res => {
+        this.notificationService.showWarning('Utilisateur bloqué');
         this.loadUsers();
       },
-      err => console.error('Error blocking user', err)
+      err => this.notificationService.showError('Erreur lors du blocage')
     );
   }
 
-  deleteUser(id: number) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+  async deleteUser(id: number) {
+    const confirmed = await this.notificationService.confirm(
+      'Suppression', 
+      'Êtes-vous sûr de vouloir supprimer cet utilisateur ?',
+      'Oui, supprimer'
+    );
+    
+    if (confirmed) {
       this.authService.deleteUser(id).subscribe(
         res => {
+          this.notificationService.showSuccess('Utilisateur supprimé');
           this.loadUsers();
         },
-        err => console.error('Error deleting user', err)
+        err => this.notificationService.showError('Erreur lors de la suppression')
       );
     }
   }
@@ -179,6 +191,7 @@ export class UsersComponent {
   onSubmit(): void {
     this.authService.register(this.user)
       .subscribe(response => {
+        this.notificationService.showSuccess('Utilisateur enregistré avec succès');
         this.user = {
           id: 0,
           firstname: '',
@@ -198,7 +211,7 @@ export class UsersComponent {
         this.closeModal();
         this.loadUsers();
       }, error => {
-        console.error('Error saving user:', error);
+        this.notificationService.showError('Erreur lors de l\'enregistrement de l\'utilisateur');
       });
   }
 
@@ -208,11 +221,20 @@ export class UsersComponent {
   }
 
   searchUsers() {
-    this.filteredUsers = this.clients.filter(u =>
-      (u.firstname + ' ' + u.lastname).toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      u.role.toLowerCase().includes(this.searchTerm.toLowerCase())
-    );
+    if (!this.clients) {
+      this.filteredUsers = [];
+      return;
+    }
+    const term = (this.searchTerm || '').toLowerCase();
+    this.filteredUsers = this.clients.filter(u => {
+      const first = u.firstname || '';
+      const last = u.lastname || '';
+      const email = u.email || '';
+      const role = u.role || '';
+      return (first + ' ' + last).toLowerCase().includes(term) ||
+             email.toLowerCase().includes(term) ||
+             role.toLowerCase().includes(term);
+    });
   }
 
   exportToExcel() {

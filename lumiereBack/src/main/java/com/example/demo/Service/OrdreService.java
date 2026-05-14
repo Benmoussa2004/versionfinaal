@@ -61,16 +61,21 @@ public class OrdreService {
 		});
 	}
 
+	public List<Ordre> findByClientCodesAndOwner(List<String> clientCodes, com.example.demo.Entity.User owner) {
+		return ordreRepository.findByClientCodesAndOwner(clientCodes, owner);
+	}
+
 	public Optional<Ordre> findById(Long id) {
 		return ordreRepository.findById(id);
 	}
 
 	@Transactional
-	public Ordre save(Ordre ordre) {
+	public Ordre save(Ordre ordre, com.example.demo.Entity.User owner) {
 		// 1. Générer le numéro d'ordre en premier (peut déclencher un flush de session)
 		String orderNumber = "DIV" + generateOrderNumber();
 		ordre.setOrderNumber(orderNumber);
 		ordre.setStatut(Statut.NON_CONFIRME);
+		ordre.setOwner(owner);
 
 		// 2. Créer et sauvegarder le tracking d'abord
 		Tranck tranck = new Tranck();
@@ -155,10 +160,10 @@ public class OrdreService {
 			
 			// Find the user ID associated with this client to target them specifically
 			clientRepository.findByCodeclient(updatedOrdre.getClient()).ifPresent(client -> {
-				if (client.getOwner() != null) {
-					notification.setTargetUserId(client.getOwner().getId());
+				if (!client.getOwners().isEmpty()) {
+					notification.setTargetUserId(client.getOwners().get(0).getId());
 				} else {
-					// Fallback to role-based if owner is not linked
+					// Fallback to role-based if owners list is empty
 					notification.setTargetRole(com.example.demo.Entity.Role.CLIENT);
 				}
 			});
@@ -237,8 +242,8 @@ public class OrdreService {
 			notification.setRead(false);
 			
 			clientRepository.findByCodeclient(updatedOrdre.getClient()).ifPresent(client -> {
-				if (client.getOwner() != null) {
-					notification.setTargetUserId(client.getOwner().getId());
+				if (!client.getOwners().isEmpty()) {
+					notification.setTargetUserId(client.getOwners().get(0).getId());
 				}
 			});
 			
@@ -286,18 +291,30 @@ public class OrdreService {
 		return ordreRepository.countByClientCodesAndStatut(clientCodes, statut);
 	}
 
+	public long countByClientCodesAndOwner(List<String> clientCodes, com.example.demo.Entity.User owner) {
+		return ordreRepository.countByClientCodesAndOwner(clientCodes, owner);
+	}
+
+	public long countByClientCodesAndOwnerAndStatut(List<String> clientCodes, com.example.demo.Entity.User owner, Statut statut) {
+		return ordreRepository.countByClientCodesAndOwnerAndStatut(clientCodes, owner, statut);
+	}
+
 	public List<Ordre> search(String client, Statut statut, Date startSaisie, Date endSaisie, String chauffeur,
 			String site, String destination) {
-		return searchExtended(client, statut, startSaisie, endSaisie, chauffeur, site, destination, null);
+		return searchExtended(client, statut, startSaisie, endSaisie, chauffeur, site, destination, null, null);
 	}
 
 	public List<Ordre> searchExtended(String client, Statut statut, Date startSaisie, Date endSaisie, String chauffeur,
-			String site, String destination, List<String> restrictedClientCodes) {
+			String site, String destination, List<String> restrictedClientCodes, com.example.demo.Entity.User owner) {
 		return ordreRepository.findAll((root, query, cb) -> {
 			List<Predicate> predicates = new ArrayList<>();
 
 			if (restrictedClientCodes != null && !restrictedClientCodes.isEmpty()) {
 				predicates.add(root.get("client").in(restrictedClientCodes));
+			}
+
+			if (owner != null) {
+				predicates.add(cb.equal(root.get("owner"), owner));
 			}
 
 			if (client != null && !client.isEmpty()) {

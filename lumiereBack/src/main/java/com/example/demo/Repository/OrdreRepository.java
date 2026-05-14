@@ -38,7 +38,7 @@ public interface OrdreRepository extends JpaRepository<Ordre, Long>, JpaSpecific
 
 	List<Ordre> findTop1000ByOrderByIdDesc();
 
-	@Query("SELECT o FROM Ordre o WHERE o.client IN :clientCodes AND o.statut IN (com.example.demo.Entity.Statut.PLANIFIE, com.example.demo.Entity.Statut.EN_COURS_DE_CHARGEMENT, com.example.demo.Entity.Statut.CHARGE, com.example.demo.Entity.Statut.EN_COURS_DE_LIVRAISON)")
+	@Query("SELECT o FROM Ordre o WHERE o.client IN :clientCodes AND o.statut IN (com.example.demo.Entity.Statut.NON_PLANIFIE, com.example.demo.Entity.Statut.PLANIFIE, com.example.demo.Entity.Statut.EN_COURS_DE_CHARGEMENT, com.example.demo.Entity.Statut.CHARGE, com.example.demo.Entity.Statut.EN_COURS_DE_LIVRAISON)")
 	List<Ordre> findActiveOrdersByClientCodes(@Param("clientCodes") List<String> clientCodes);
 
 	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.client IN :clientCodes AND o.statut = :statut")
@@ -54,5 +54,14 @@ public interface OrdreRepository extends JpaRepository<Ordre, Long>, JpaSpecific
 	List<Ordre> findByClientOrderByIdDesc(String client);
 	
 	Optional<Ordre> findByOrderNumber(String orderNumber);
+
+	@Query("SELECT o FROM Ordre o WHERE o.client IN :clientCodes OR o.owner = :owner ORDER BY o.id DESC")
+	List<Ordre> findByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner);
+
+	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.client IN :clientCodes AND o.owner = :owner")
+	long countByClientCodesAndOwner(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner);
+
+	@Query("SELECT COUNT(o) FROM Ordre o WHERE o.client IN :clientCodes AND o.owner = :owner AND o.statut = :statut")
+	long countByClientCodesAndOwnerAndStatut(@Param("clientCodes") List<String> clientCodes, @Param("owner") com.example.demo.Entity.User owner, @Param("statut") Statut statut);
 }
 

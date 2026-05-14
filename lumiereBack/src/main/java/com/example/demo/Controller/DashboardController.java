@@ -50,7 +50,7 @@ public class DashboardController {
         Map<String, Object> stats = new HashMap<>();
         Role role = currentUser.getRole();
 
-        if (role == Role.ADMIN || role == Role.COMMERCIAL || role == Role.USER_LUMIERE) {
+        if (role == Role.ADMIN || role == Role.COMMERCIAL || role == Role.EMPLOYER_LUMIERE) {
             // Staff statistics
             stats.put("ordersCount", ordreRepository.count());
             stats.put("nonPlanifieOrdersCount", ordreRepository.countNonPlanifieOrders());

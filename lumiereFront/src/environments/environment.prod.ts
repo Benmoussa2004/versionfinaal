@@ -1,5 +1,5 @@
 // ⚠️ Modifier uniquement cette ligne pour changer l'adresse IP du backend en production
-const BASE_URL = 'http://localhost:8090';
+const BASE_URL = 'http://172.18.101.192:8090';
 
 export const environment = {
     production: true,

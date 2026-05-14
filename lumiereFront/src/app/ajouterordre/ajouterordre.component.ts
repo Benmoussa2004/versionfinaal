@@ -2,15 +2,14 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrdreService } from '../ordre.service';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { NotificationService } from '../notification.service';
 
 @Component({
   selector: 'app-ajouterordre',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    MatSnackBarModule
+    FormsModule
   ],
   templateUrl: './ajouterordre.component.html',
   styleUrl: './ajouterordre.component.css'
@@ -20,7 +19,7 @@ export class AjouterordreComponent implements OnInit {
 
   constructor(
     private service: OrdreService, 
-    private snackBar: MatSnackBar,
+    private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) { };
 
@@ -143,13 +142,13 @@ export class AjouterordreComponent implements OnInit {
 
     this.service.dupliquerMultiple(this.ordreToDuplicate.id, this.duplicateCount).subscribe(
       (copies) => {
-        console.log(`${copies.length} copies créées`);
+        this.notificationService.showSuccess(`${copies.length} copies créées`);
         this.closeDuplicateModal();
         this.afficher();
-        window.location.reload();
+        // Removed window.location.reload() to avoid flickering, afficher() should handle it
       },
       (error) => {
-        console.error('Erreur duplication', error);
+        this.notificationService.showError('Erreur lors de la duplication');
       }
     );
   }
@@ -197,40 +196,48 @@ export class AjouterordreComponent implements OnInit {
     return this.ordrenconf.filter(o => o.selected);
   }
 
-  deleteSelected() {
+  async deleteSelected() {
     const selected = this.getSelectedOrdres();
     if (selected.length === 0) return;
-    if (!confirm(`Supprimer ${selected.length} ordre(s) sélectionné(s) ?`)) return;
+    
+    const confirmed = await this.notificationService.confirm(
+        'Suppression multiple',
+        `Supprimer ${selected.length} ordre(s) sélectionné(s) ?`,
+        'Oui, supprimer'
+    );
+    if (!confirmed) return;
 
     let completed = 0;
     selected.forEach(o => {
       this.service.supprimer(o.id).subscribe(() => {
         completed++;
         if (completed === selected.length) {
+          this.notificationService.showSuccess(`${selected.length} ordres supprimés`);
           this.afficher();
         }
       });
     });
   }
 
-  confirmerSelected() {
+  async confirmerSelected() {
     const selected = this.getSelectedOrdres();
     if (selected.length === 0) return;
-    if (!confirm(`Confirmer/Valider ${selected.length} ordre(s) sélectionné(s) ?`)) return;
+    
+    const confirmed = await this.notificationService.confirm(
+        'Validation multiple',
+        `Confirmer/Valider ${selected.length} ordre(s) sélectionné(s) ?`,
+        'Oui, valider'
+    );
+    if (!confirmed) return;
 
     const ids = selected.map(o => o.id);
     this.service.confirmerMultiple(ids).subscribe({
       next: () => {
-        this.snackBar.open('✅ Ordres confirmés et fichier PLA généré !', 'Fermer', {
-          duration: 3000
-        });
+        this.notificationService.showSuccess('✅ Ordres confirmés et fichier PLA généré !');
         this.afficher();
       },
       error: (err) => {
-        console.error('Erreur lors de la confirmation multiple', err);
-        this.snackBar.open('❌ Erreur lors de la confirmation.', 'Fermer', {
-          duration: 3000
-        });
+        this.notificationService.showError('❌ Erreur lors de la confirmation.');
       }
     });
   }

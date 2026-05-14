@@ -57,12 +57,12 @@ public class OrdreController {
 		if (user.isStaff()) {
 			return ordreService.findAll();
 		} else {
-			// Client filtering
+			// Client filtering by OWNERSHIP and CLIENT CODES
 			List<String> clientCodes = user.getOwnedClients().stream()
 				.map(Client::getCodeclient)
 				.toList();
 			if (clientCodes.isEmpty()) return new ArrayList<>();
-			return ordreService.findByClientCodes(clientCodes);
+			return ordreService.findByClientCodesAndOwner(clientCodes, user);
 		}
 	}
 
@@ -80,8 +80,9 @@ public class OrdreController {
 
 	// ✅ POST créer un ordre
 	@PostMapping
-	public Ordre createOrdre(@RequestBody Ordre ordre) {
-		return ordreService.save(ordre);
+	public Ordre createOrdre(@RequestBody Ordre ordre, Authentication authentication) {
+		User currentUser = (User) authentication.getPrincipal();
+		return ordreService.save(ordre, currentUser);
 	}
 
 	// ✅ PUT mettre à jour un ordre
@@ -171,6 +172,7 @@ public class OrdreController {
 		copie.setNomclient(original.getNomclient());
 		copie.setSiteclient(original.getSiteclient());
 		copie.setIdedi(original.getIdedi());
+		copie.setOwner(original.getOwner());
 		copie.setCodeclientcharg(original.getCodeclientcharg());
 		copie.setChargementNom(original.getChargementNom());
 		copie.setChargementAdr1(original.getChargementAdr1());
@@ -218,6 +220,7 @@ public class OrdreController {
 			copie.setNomclient(original.getNomclient());
 			copie.setSiteclient(original.getSiteclient());
 			copie.setIdedi(original.getIdedi());
+			copie.setOwner(original.getOwner());
 			copie.setCodeclientcharg(original.getCodeclientcharg());
 			copie.setChargementNom(original.getChargementNom());
 			copie.setChargementAdr1(original.getChargementAdr1());
@@ -284,13 +287,13 @@ public class OrdreController {
 				stats.put("enCoursDeLivraison", 0L);
 				stats.put("livre", 0L);
 			} else {
-				stats.put("total", ordreService.countByClientCodes(codes));
-				stats.put("nonPlanifie", ordreService.countByClientCodesAndStatut(codes, Statut.NON_PLANIFIE));
-				stats.put("planifie", ordreService.countByClientCodesAndStatut(codes, Statut.PLANIFIE));
-				stats.put("enCoursDeChargement", ordreService.countByClientCodesAndStatut(codes, Statut.EN_COURS_DE_CHARGEMENT));
-				stats.put("charge", ordreService.countByClientCodesAndStatut(codes, Statut.CHARGE));
-				stats.put("enCoursDeLivraison", ordreService.countByClientCodesAndStatut(codes, Statut.EN_COURS_DE_LIVRAISON));
-				stats.put("livre", ordreService.countByClientCodesAndStatut(codes, Statut.LIVRE));
+				stats.put("total", ordreService.countByClientCodesAndOwner(codes, user));
+				stats.put("nonPlanifie", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.NON_PLANIFIE));
+				stats.put("planifie", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.PLANIFIE));
+				stats.put("enCoursDeChargement", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.EN_COURS_DE_CHARGEMENT));
+				stats.put("charge", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.CHARGE));
+				stats.put("enCoursDeLivraison", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.EN_COURS_DE_LIVRAISON));
+				stats.put("livre", ordreService.countByClientCodesAndOwnerAndStatut(codes, user, Statut.LIVRE));
 			}
 		}
 		return ResponseEntity.ok(stats);
@@ -352,7 +355,7 @@ public class OrdreController {
 			if (restrictedClientCodes.isEmpty()) return new ArrayList<>();
 		}
 		
-		return ordreService.searchExtended(client, statut, startDate, endDate, chauffeur, site, destination, restrictedClientCodes);
+		return ordreService.searchExtended(client, statut, startDate, endDate, chauffeur, site, destination, restrictedClientCodes, user.isStaff() ? null : user);
 	}
 
 	// --- Endpoints comptages individuels (compatibilité web) ---

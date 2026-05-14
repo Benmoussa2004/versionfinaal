@@ -110,18 +110,18 @@ public class PermissionService {
         for (Role role : Role.values()) {
             for (String feature : features) {
                 if (repository.findByRoleAndFeatureKey(role, feature).isEmpty()) {
-                    boolean enabled = (role == Role.ADMIN || role == Role.SUPERADMIN || role == Role.COMMERCIAL);
+                    boolean enabled = (role == Role.ADMIN || role == Role.COMMERCIAL);
 
-                    // Defaults for CLIENT / USER_LUMIERE / USER / USER_OTFLOW
-                    if ((role == Role.CLIENT || role == Role.USER_LUMIERE || role == Role.USER || role == Role.USER_OTFLOW)) {
+                    // Defaults for CLIENT / EMPLOYER_LUMIERE
+                    if ((role == Role.CLIENT || role == Role.EMPLOYER_LUMIERE)) {
                         List<String> allowedForAll = Arrays.asList(
                                 "DASHBOARD", "ORDRES", "ORDRES_TRACK", "EMAILS");
                         if (allowedForAll.contains(feature)) {
                             enabled = true;
                         }
 
-                        // User Lumiere can also add orders
-                        if (role == Role.USER_LUMIERE
+                        // Employer Lumiere can also add orders
+                        if (role == Role.EMPLOYER_LUMIERE
                                 && (feature.equals("ORDRES_ADD") || feature.equals("ORDRES_VALIDATE"))) {
                             enabled = true;
                         }

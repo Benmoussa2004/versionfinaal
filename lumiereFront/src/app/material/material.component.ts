@@ -7,7 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { NotificationService } from '../notification.service';
+import { NotificationService, SystemNotification } from '../notification.service';
 import { AuthService } from '../auth.service';
 import { PermissionService } from '../permission.service';
 
@@ -36,7 +36,7 @@ export class MaterialComponent implements OnInit, OnDestroy {
 
   user: any = {};
   showNotifications = false;
-  clients: any[] = [];
+  clients: SystemNotification[] = [];
   hasNewNotifications = false;
   permissions: { [key: string]: boolean } = {};
 
@@ -97,15 +97,15 @@ export class MaterialComponent implements OnInit, OnDestroy {
 
   afficher() {
     this.service.afficher().subscribe({
-      next: (notifs) => {
+      next: (notifs: SystemNotification[]) => {
         console.log('Notifications received:', notifs?.length);
-        this.clients = (notifs || []).sort((a: any, b: any) =>
+        this.clients = (notifs || []).sort((a: SystemNotification, b: SystemNotification) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
         this.hasNewNotifications = this.clients.some(n => !n.isRead);
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Error fetching notifications:', err)
+      error: (err: any) => console.error('Error fetching notifications:', err)
     });
   }
 

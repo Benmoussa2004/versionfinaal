@@ -43,9 +43,12 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        // Create the User record (even for PENDING clients)
+        String email = request.email().toLowerCase().trim();
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Un compte avec cet email existe déjà.");
+        }
         final var user = new User();
-        user.setEmail(request.email());
+        user.setEmail(email);
         user.setFirstname(request.firstname());
         user.setLastname(request.lastname());
         user.setPasswd(passwordEncoder.encode(request.password()));
@@ -55,11 +58,10 @@ public class AuthenticationService {
         user.setStatus(com.example.demo.Entity.Status.PENDING);
         userRepository.save(user);
 
-        // Create a Client record for ALL users to track their approval/profile
         Client client = new Client();
         client.setNom(request.lastname());
-        client.setEmail(request.email());
-        client.setOwner(user);
+        client.setEmail(email);
+        user.getOwnedClients().add(client);
         client.setRegistrationApproved(false);
         client.setProfileCompleted(false);
         
@@ -75,7 +77,7 @@ public class AuthenticationService {
         
         clientRepository.save(client);
 
-        logger.info("Pending registration created for: {}", request.email());
+        logger.info("Pending registration created for: {}", email);
 
         // Notifications...
         sendNotifications(request);
@@ -106,23 +108,41 @@ public class AuthenticationService {
             notification.setType("Inscription");
             notification.setMessage("Nouvelle inscription : " + request.firstname() + " " + request.lastname());
             notification.setRead(false);
-            notification.setTargetRole(com.example.demo.Entity.Role.ADMIN); // Changed to ADMIN to match user role
+            notification.setTargetRole(com.example.demo.Entity.Role.ADMIN); 
             notificationService.createNotification(notification);
         } catch (Exception e) {
             logger.error("Failed to create UI notification: {}", e.getMessage());
         }
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(AuthenticationRequest request, String appPlatform) {
+        String email = request.email().toLowerCase().trim();
+        logger.info("Attempting login for email: {} (Platform: {})", email, appPlatform);
+        
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.email(),
+                        email,
                         request.password()));
-        final var user = userRepository.findFirstByEmailOrderByIdAsc(request.email()).orElseThrow();
+        
+        final var user = userRepository.findFirstByEmailOrderByIdAsc(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé."));
+
+        // [NEW] Mobile access restriction
+        if ("mobile".equalsIgnoreCase(appPlatform) && user.getRole() != com.example.demo.Entity.Role.CLIENT) {
+            logger.warn("Non-client user {} attempted mobile login", email);
+            throw new RuntimeException("ACCES_REFUSE: Seuls les comptes clients peuvent accéder à l'application mobile.");
+        }
+
+        if (user.getStatus() == com.example.demo.Entity.Status.PENDING) {
+            throw new RuntimeException("ACCOUNT_PENDING: Votre compte est en attente de validation.");
+        }
+
+        if (user.getStatus() == com.example.demo.Entity.Status.REJECTED) {
+            throw new RuntimeException("ACCOUNT_REJECTED: Votre compte a été rejeté.");
+        }
 
         if (user.getStatus() != com.example.demo.Entity.Status.ACTIVE) {
-            logger.warn("Login attempt for non-active account: {} (Status: {})", request.email(), user.getStatus());
-            throw new RuntimeException("Votre compte est en attente de validation ou a été désactivé.");
+            throw new RuntimeException("ACCES_REFUSE: Votre compte est désactivé.");
         }
 
         final var token = JwtService.generateToken(user);
