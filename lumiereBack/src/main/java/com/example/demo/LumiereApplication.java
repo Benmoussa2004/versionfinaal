@@ -36,7 +36,8 @@ public class LumiereApplication {
 
 		corsConfiguration.setAllowCredentials(true);
 
-		corsConfiguration.setAllowedOrigins(Arrays.asList("http://192.168.1.107:8100", "http://192.168.1.107:4200",
+		corsConfiguration.setAllowedOrigins(Arrays.asList("http://192.168.1.253:8100", "http://192.168.1.253:4200",
+				"http://192.168.1.107:8100", "http://192.168.1.107:4200",
 				"http://172.18.101.132:4200", "http://172.18.101.132:8100",
 				"http://172.18.3.125:4200", "http://18.209.167.231",
 				"http://172.16.3.76:4200", "http://172.16.3.76:8100",
